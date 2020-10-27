@@ -26,8 +26,8 @@ eventHandler dis event = case event of
     let uid = userId $ memberUser mem
     res <- addPandaRole dis uid gid
     case res of
-      Left err -> TIO.putStrLn $ pack $ show err
-      Right _ -> TIO.putStrLn $ "Added panda role for user " <> pack (show mem)
+      Left err -> print err
+      Right _ -> putStrLn $ "Added panda role for user " <> show mem
   _ -> pure ()
 
 addPandaRole :: DiscordHandle -> UserId -> GuildId -> IO (Either RestCallErrorCode ())
