@@ -28,6 +28,7 @@ eventHandler dis event = case event of
     case res of
       Left err -> print err
       Right () -> putStrLn $ "Added panda role for user " <> show mem
+  TypingStart _ -> pure ()
   other -> putStrLn . head . words . show $ other
 
 addPandaRole :: DiscordHandle -> UserId -> GuildId -> IO (Either RestCallErrorCode ())
