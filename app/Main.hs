@@ -27,8 +27,8 @@ eventHandler dis event = case event of
     res <- addPandaRole dis uid gid
     case res of
       Left err -> print err
-      Right _ -> putStrLn $ "Added panda role for user " <> show mem
-  _ -> pure ()
+      Right () -> putStrLn $ "Added panda role for user " <> show mem
+  other -> putStrLn . head . words . show $ other
 
 addPandaRole :: DiscordHandle -> UserId -> GuildId -> IO (Either RestCallErrorCode ())
 addPandaRole dis usr gid = restCall dis $ R.AddGuildMemberRole gid usr 762055744555188234 -- Hardcoded! TODO Change this
