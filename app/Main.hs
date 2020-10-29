@@ -24,6 +24,7 @@ eventHandler :: DiscordHandle -> Event -> IO ()
 eventHandler dis event = case event of
   GuildMemberAdd gid mem -> do
     let uid = userId $ memberUser mem
+    putStrLn $ "User " <> show uid <> " joined guild " <> show gid
     res <- addPandaRole dis uid gid
     case res of
       Left err -> print err
