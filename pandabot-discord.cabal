@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c9cba2d5c312b95b2fa2a5f08bda867394536e1bd28fed217b4e39115f724dcb
+-- hash: 652326036f9f8741583b96196f8a05af60ac62dd45cc42f5e3ce72e0928a7625
 
 name:           pandabot-discord
 version:        0.1.0.0
@@ -34,6 +34,7 @@ library
       base >=4.7 && <5
     , discord-haskell
     , text
+    , time
   default-language: Haskell2010
 
 executable pandabot-discord-exe
@@ -48,6 +49,7 @@ executable pandabot-discord-exe
     , discord-haskell
     , pandabot-discord
     , text
+    , time
   default-language: Haskell2010
 
 test-suite pandabot-discord-test
@@ -63,4 +65,5 @@ test-suite pandabot-discord-test
     , discord-haskell
     , pandabot-discord
     , text
+    , time
   default-language: Haskell2010

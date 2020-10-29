@@ -7,6 +7,8 @@ import Discord
 import qualified Discord.Requests as R
 import Discord.Types
 import System.Environment
+import Data.Time
+
 
 main :: IO ()
 main = do
@@ -24,13 +26,19 @@ eventHandler :: DiscordHandle -> Event -> IO ()
 eventHandler dis event = case event of
   GuildMemberAdd gid mem -> do
     let uid = userId $ memberUser mem
-    putStrLn $ "User " <> show uid <> " joined guild " <> show gid
+    logS $ "User " <> show uid <> " joined guild " <> show gid
     res <- addPandaRole dis uid gid
     case res of
       Left err -> print err
-      Right () -> putStrLn $ "Added panda role for user " <> show mem
+      Right () -> logS $ "Added panda role for user " <> show mem
   TypingStart _ -> pure ()
-  other -> putStrLn . head . words . show $ other
+  other -> logS . head . words . show $ other
+
+logS :: String -> IO ()
+logS s = do
+  t <- getCurrentTime
+  let fmt = formatTime defaultTimeLocale "[%F %T] " t
+  putStrLn $ fmt <> s
 
 addPandaRole :: DiscordHandle -> UserId -> GuildId -> IO (Either RestCallErrorCode ())
 addPandaRole dis usr gid = restCall dis $ R.AddGuildMemberRole gid usr 762055744555188234 -- Hardcoded! TODO Change this
