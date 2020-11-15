@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 652326036f9f8741583b96196f8a05af60ac62dd45cc42f5e3ce72e0928a7625
+-- hash: 858f857d03f251aa7271967e2ffc22dcd5b231d5026cb949dfb26588781aae63
 
 name:           pandabot-discord
 version:        0.1.0.0
@@ -26,15 +26,28 @@ source-repository head
   location: https://github.com/githubuser/pandabot-discord
 
 library
+  exposed-modules:
+      Buttons
+      Commands
+      Database
+      Schema
+      Types
   other-modules:
       Paths_pandabot_discord
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , conduit
     , discord-haskell
+    , monad-logger
+    , optparse-applicative
+    , persistent
+    , persistent-sqlite
+    , persistent-template
     , text
     , time
+    , transformers
   default-language: Haskell2010
 
 executable pandabot-discord-exe
@@ -46,10 +59,17 @@ executable pandabot-discord-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , conduit
     , discord-haskell
+    , monad-logger
+    , optparse-applicative
     , pandabot-discord
+    , persistent
+    , persistent-sqlite
+    , persistent-template
     , text
     , time
+    , transformers
   default-language: Haskell2010
 
 test-suite pandabot-discord-test
@@ -62,8 +82,15 @@ test-suite pandabot-discord-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , conduit
     , discord-haskell
+    , monad-logger
+    , optparse-applicative
     , pandabot-discord
+    , persistent
+    , persistent-sqlite
+    , persistent-template
     , text
     , time
+    , transformers
   default-language: Haskell2010

@@ -24,6 +24,13 @@ dependencies:
 - discord-haskell
 - text
 - time
+- transformers
+- persistent
+- persistent-sqlite
+- persistent-template
+- monad-logger
+- conduit
+- optparse-applicative
 
 library:
   source-dirs: src
