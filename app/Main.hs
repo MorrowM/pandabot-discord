@@ -1,28 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader
+import Data.Char
 import Data.Foldable
 import Data.Text (Text, pack)
-import qualified Data.Text as T
 import Data.Time
 import Discord
 import Discord.Requests
 import Discord.Types
-import qualified Data.Text.IO as TIO
 import Options.Applicative
-import System.Environment
-import System.Exit
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import qualified Database.Persist as P
 import qualified Database.Persist.Sql as SQL
+import System.Environment
+import System.Exit
 
-import Types
 import Buttons
-import Schema
 import Commands
+import Schema
+import Types
 
 main :: IO ()
 main = do
@@ -51,13 +53,13 @@ eventHandler event = case event of
     addPandaRole uid gid
   TypingStart _ -> pure ()
   PresenceUpdate _ -> pure ()
-
   MessageReactionAdd info -> do
     myUid <- myUserId
     assertTrue $ myUid /= reactionUserId info
     case reactionGuildId info of
       Nothing -> pure ()
       Just gid -> do
+        logS $ "User " <> show (reactionUserId info) <> " reacted with " <> show (emojiName $ reactionEmoji info) <> " on message " <> show (reactionMessageId info)
         mem <- run $ GetGuildMember gid (reactionUserId info)
         btns <- buttons
         for_ btns $ \button -> do
@@ -65,13 +67,12 @@ eventHandler event = case event of
               bemoji = buttonEmoji button
               bchannel = toEnum $ buttonChannel button
               brole = toEnum $ buttonRole button
-          when (bmsg == reactionMessageId info && emojiName (reactionEmoji info) == bemoji) $ do
+          when (bmsg == reactionMessageId info && emojiName (reactionEmoji info) == stripEmoji bemoji) $ do
             if brole `elem` memberRoles mem
-            then removeRole brole (reactionUserId info) gid
-            else giveRole brole (reactionUserId info) gid
+              then removeRole brole (reactionUserId info) gid
+              else giveRole brole (reactionUserId info) gid
             run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId info) bemoji
             logS $ "User " <> show (reactionUserId info) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
-        
   MessageCreate msg -> handleMessageCreate msg
   other -> logS . head . words . show $ other
 
@@ -80,15 +81,16 @@ handleMessageCreate msg = catchErr $ do
   handleComm msg
 
 handleComm :: Message -> Handler ()
-handleComm msg = catchErr $
-  if "!help" `T.isPrefixOf` messageText msg
-    then runComm ["-h"] msg
-    else
-      if "!" `T.isPrefixOf` messageText msg
-        then
-          let args = map T.unpack $ wordsWithQuotes (T.drop 1 (messageText msg))
-            in runComm args msg
-        else pure ()
+handleComm msg =
+  catchErr $
+    if "!help" `T.isPrefixOf` messageText msg
+      then runComm ["-h"] msg
+      else
+        if "!" `T.isPrefixOf` messageText msg
+          then
+            let args = map T.unpack $ wordsWithQuotes (T.drop 1 (messageText msg))
+             in runComm args msg
+          else pure ()
 
 runComm :: [String] -> Message -> Handler ()
 runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
@@ -141,6 +143,10 @@ wordsWithQuotes = concat . wordsEveryOther . T.splitOn "\""
 myUserId :: Handler UserId
 myUserId = do
   dis <- lift ask
-  dis <- lift ask
   cache <- liftIO $ readCache dis
   pure $ userId $ _currentUser cache
+
+stripEmoji :: Text -> Text
+stripEmoji emoji = if T.all isAscii emoji
+  then T.takeWhile (/= ':') . T.drop 2 $ emoji
+  else emoji

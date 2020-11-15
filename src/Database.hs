@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Database
-  ( db,
-    DatabaseAction,
+  ( db
+  , DatabaseAction
   )
 where
 

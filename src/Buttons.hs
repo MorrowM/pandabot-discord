@@ -1,10 +1,15 @@
-module Buttons where
+module Buttons 
+  ( giveRole
+  , removeRole
+  , buttons
+  ) where
 
-import Types
 import Discord.Requests
 import Discord.Types
-import Schema
 import qualified Database.Persist as P
+
+import Schema
+import Types
 
 giveRole :: RoleId -> UserId -> GuildId -> Handler ()
 giveRole role user gid = run $ AddGuildMemberRole gid user role

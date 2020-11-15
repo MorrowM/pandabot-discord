@@ -1,9 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Commands where
+module Commands 
+  ( Comm (..)
+  , ButtonComm (..)
+  , rootComm
+  ) where
 
+import Data.Text (Text)
 import Discord.Types
-import Data.Text (Text ())
 import Options.Applicative
 
 newtype Comm = ButtonComm ButtonComm
@@ -26,11 +30,12 @@ rootSubComm =
 data ButtonComm = AddButton ChannelId Text RoleId Text
 
 addOptions :: Parser ButtonComm
-addOptions = AddButton
-  <$> argument auto (metavar "CHANNEL_ID")
-  <*> argument str (metavar "EMOJI_NAME")
-  <*> argument auto (metavar "ROLE_ID")
-  <*> argument str (metavar "MESSAGE_CONTENT")
+addOptions =
+  AddButton
+    <$> argument auto (metavar "CHANNEL_ID")
+    <*> argument str (metavar "EMOJI_NAME")
+    <*> argument auto (metavar "ROLE_ID")
+    <*> argument str (metavar "MESSAGE_CONTENT")
 
 buttonSubComm :: Parser ButtonComm
 buttonSubComm =

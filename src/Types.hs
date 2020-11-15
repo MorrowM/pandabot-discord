@@ -1,18 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Types where
+module Types 
+  ( Handler
+  , runHandler
+  , runDB
+  , run
+  , catchErr
+  , raiseErr
+  , assertTrue
+  ) where
 
-import Data.Text (Text)
-import qualified Data.Text as T
-import Control.Monad.Trans.Class
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Reader
+import Data.Text (Text)
 import Data.Time
 import Discord
 import Discord.Internal.Rest.Prelude
+import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Database
 
+import Database
 
 type Handler a = ExceptT Text (ReaderT DiscordHandle IO) a
 
@@ -23,7 +31,7 @@ runHandler dis h = do
     Left err -> logS err
     Right () -> pure ()
   where
-    logS s =  do
+    logS s = do
       t <- getCurrentTime
       let fmt = T.pack $ formatTime defaultTimeLocale "[%F %T] " t
       TIO.putStrLn $ fmt <> s
