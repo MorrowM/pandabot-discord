@@ -1,0 +1,10 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "pandabot-discord:lib"
+
+    - path: "./app/Main.hs"
+      component: "pandabot-discord:exe:pandabot-discord-exe"
+
+    - path: "./test"
+      component: "pandabot-discord:test:pandabot-discord-test"
