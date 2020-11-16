@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 858f857d03f251aa7271967e2ffc22dcd5b231d5026cb949dfb26588781aae63
+-- hash: 76072b5a5cad03a9f8d0fb32f2c06a7aa5fd8b949c7d158cd4380816c85d07c6
 
 name:           pandabot-discord
 version:        0.1.0.0
@@ -56,7 +56,7 @@ executable pandabot-discord-exe
       Paths_pandabot_discord
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       base >=4.7 && <5
     , conduit

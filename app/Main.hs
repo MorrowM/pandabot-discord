@@ -8,6 +8,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Data.Char
 import Data.Foldable
+import Data.List
 import Data.Text (Text, pack)
 import Data.Time
 import Discord
@@ -25,6 +26,8 @@ import Buttons
 import Commands
 import Schema
 import Types
+
+import Options.Applicative.Help.Chunk
 
 main :: IO ()
 main = do
@@ -53,26 +56,26 @@ eventHandler event = case event of
     addPandaRole uid gid
   TypingStart _ -> pure ()
   PresenceUpdate _ -> pure ()
-  MessageReactionAdd info -> do
+  MessageReactionAdd rinfo -> do
     myUid <- myUserId
-    assertTrue $ myUid /= reactionUserId info
-    case reactionGuildId info of
+    assertTrue $ myUid /= reactionUserId rinfo
+    case reactionGuildId rinfo of
       Nothing -> pure ()
       Just gid -> do
-        logS $ "User " <> show (reactionUserId info) <> " reacted with " <> show (emojiName $ reactionEmoji info) <> " on message " <> show (reactionMessageId info)
-        mem <- run $ GetGuildMember gid (reactionUserId info)
+        logS $ "User " <> show (reactionUserId rinfo) <> " reacted with " <> show (emojiName $ reactionEmoji rinfo) <> " on message " <> show (reactionMessageId rinfo)
+        mem <- run $ GetGuildMember gid (reactionUserId rinfo)
         btns <- buttons
         for_ btns $ \button -> do
           let bmsg = toEnum $ buttonMessage button
               bemoji = buttonEmoji button
               bchannel = toEnum $ buttonChannel button
               brole = toEnum $ buttonRole button
-          when (bmsg == reactionMessageId info && emojiName (reactionEmoji info) == stripEmoji bemoji) $ do
+          when (bmsg == reactionMessageId rinfo && emojiName (reactionEmoji rinfo) == stripEmoji bemoji) $ do
             if brole `elem` memberRoles mem
-              then removeRole brole (reactionUserId info) gid
-              else giveRole brole (reactionUserId info) gid
-            run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId info) bemoji
-            logS $ "User " <> show (reactionUserId info) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
+              then removeRole brole (reactionUserId rinfo) gid
+              else giveRole brole (reactionUserId rinfo) gid
+            run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bemoji
+            logS $ "User " <> show (reactionUserId rinfo) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
   MessageCreate msg -> handleMessageCreate msg
   other -> logS . head . words . show $ other
 
@@ -103,14 +106,18 @@ runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
         reactPositive
         runButtonComm comm
   Failure f -> do
-    let (help, status, _) = execFailure f ""
-        helpStr = "```" ++ show help ++ "```"
+    let (hlp, status, _) = execFailure f ""
+        helpStr = "```" ++ show hlp ++ "```"
+    assertTrue $ 
+      not ("Usage:  COMMAND\n" `isPrefixOf` maybe "" show (unChunk $ helpUsage hlp))
+      || status == ExitSuccess
 
     if status == ExitSuccess
       then reactPositive
       else reactNegative
 
     void $ run $ CreateMessage (messageChannel msg) (T.pack helpStr)
+  _ -> pure ()
   where
     reactPositive = run $ CreateReaction (messageChannel msg, messageId msg) ":white_check_mark:"
     reactNegative = run $ CreateReaction (messageChannel msg, messageId msg) ":x:"
@@ -119,7 +126,7 @@ runButtonComm :: ButtonComm -> Handler ()
 runButtonComm btn = case btn of
   AddButton chan emoji role txt -> do
     msg <- run $ CreateMessage chan txt
-    runDB $ P.insert $ Button (fromEnum chan) (fromEnum $ messageId msg) emoji (fromEnum role)
+    void $ runDB $ P.insert $ Button (fromEnum chan) (fromEnum $ messageId msg) emoji (fromEnum role)
     logS $ "Created button in channel " <> show chan <> " on message " <> show (messageId msg) <> " with emoji " <> show emoji <> " for role " <> show role
     run $ CreateReaction (chan, messageId msg) emoji
 
