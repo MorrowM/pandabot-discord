@@ -129,6 +129,10 @@ runButtonComm btn = case btn of
     void $ runDB $ P.insert $ Button (fromEnum chan) (fromEnum $ messageId msg) emoji (fromEnum role)
     logS $ "Created button in channel " <> show chan <> " on message " <> show (messageId msg) <> " with emoji " <> show emoji <> " for role " <> show role
     run $ CreateReaction (chan, messageId msg) emoji
+  InsertButton chan emoji role mid -> do
+    void $ runDB $ P.insert $ Button (fromEnum chan) (fromEnum mid) emoji (fromEnum role)
+    logS $ "Inserted button in channel " <> show chan <> " on message " <> show mid <> " with emoji " <> show emoji <> " for role " <> show role
+    run $ CreateReaction (chan, mid) emoji
 
 logS :: String -> Handler ()
 logS s = do
