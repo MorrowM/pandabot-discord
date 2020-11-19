@@ -1,3 +1,4 @@
 .stack-work/
 *~
 database.sqlite
+log.txt

@@ -135,10 +135,12 @@ runButtonComm btn = case btn of
     run $ CreateReaction (chan, mid) emoji
 
 logS :: String -> Handler ()
-logS s = do
-  t <- liftIO getCurrentTime
+logS s = liftIO $ do
+  t <- getCurrentTime
   let fmt = formatTime defaultTimeLocale "[%F %T] " t
-  liftIO $ putStrLn $ fmt <> s
+      output = fmt <> s <> "\n"
+  putStr output
+  appendFile "log.txt" output
 
 addPandaRole :: UserId -> GuildId -> Handler ()
 addPandaRole usr gid = run $ AddGuildMemberRole gid usr 762055744555188234 -- Hardcoded! TODO Change this
