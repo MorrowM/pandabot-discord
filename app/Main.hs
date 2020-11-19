@@ -56,6 +56,8 @@ eventHandler event = case event of
     addPandaRole uid gid
   TypingStart _ -> pure ()
   PresenceUpdate _ -> pure ()
+  Ready {} -> pure ()
+  GuildCreate {} -> pure ()
   MessageReactionAdd rinfo -> do
     myUid <- myUserId
     assertTrue $ myUid /= reactionUserId rinfo
