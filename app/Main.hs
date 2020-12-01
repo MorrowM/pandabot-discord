@@ -104,15 +104,21 @@ runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
     ButtonComm comm -> inGuild (messageGuild msg) $ \gid -> do
       mem <- run $ GetGuildMember gid (userId $ messageAuthor msg)
       usrIsAdmin <- isAdmin gid mem
+      
       if usrIsAdmin then do
         res <- runButtonComm comm gid
         case res of
           Right () -> reactPositive
-          Left _ -> reactNegative
+          Left err -> do
+            reactNegative
+            case err of
+              RoleIdNameError NameNotFound -> reply "Sorry, I couldn't find a role with this name."
+              RoleIdNameError (NameAmbiguous roles) -> reply $ "There are multiple roles with this name: " <> T.pack (show $ roleId <$> roles)
+              ChannelIdNameError NameNotFound -> reply "Sorry, I couldn't find a channel with this name."
+              ChannelIdNameError (NameAmbiguous chans) -> reply $ "There are multiple channels with this name: " <> T.pack (show $ snd <$> chans)
         else do
           reactNegative
-          void $ run $ CreateMessage (messageChannel msg) "You must be an administrator to run this command."
-
+          reply "You must be an administrator to run this command."
         
   Failure f -> do
     let (hlp, status, _) = execFailure f ""
@@ -125,9 +131,10 @@ runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
       then reactPositive
       else reactNegative
 
-    void $ run $ CreateMessage (messageChannel msg) (T.pack helpStr)
+    reply $ T.pack helpStr
   _ -> pure ()
   where
+    reply = void . run . CreateMessage (messageChannel msg)
     reactPositive = run $ CreateReaction (messageChannel msg, messageId msg) ":white_check_mark:"
     reactNegative = run $ CreateReaction (messageChannel msg, messageId msg) ":x:"
 
