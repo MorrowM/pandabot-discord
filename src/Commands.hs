@@ -28,23 +28,23 @@ rootSubComm =
     )
 
 data ButtonComm 
-  = AddButton ChannelId Text RoleId Text
-  | InsertButton ChannelId Text RoleId MessageId
+  = AddButton Text Text Text Text
+  | InsertButton Text Text Text MessageId
 
 addOptions :: Parser ButtonComm
 addOptions =
   AddButton
-    <$> argument auto (metavar "CHANNEL_ID")
-    <*> argument str (metavar "EMOJI_NAME")
-    <*> argument auto (metavar "ROLE_ID")
+    <$> argument str (metavar "CHANNEL")
+    <*> argument str (metavar "EMOJI")
+    <*> argument str (metavar "ROLE")
     <*> argument str (metavar "MESSAGE_CONTENT")
 
 insertOptions :: Parser ButtonComm
 insertOptions =
   InsertButton
-    <$> argument auto (metavar "CHANNEL_ID")
-    <*> argument str (metavar "EMOJI_NAME")
-    <*> argument auto (metavar "ROLE_ID")
+    <$> argument str (metavar "CHANNEL")
+    <*> argument str (metavar "EMOJI")
+    <*> argument str (metavar "ROLE")
     <*> argument auto (metavar "MESSAGE_ID")
 
 buttonSubComm :: Parser ButtonComm

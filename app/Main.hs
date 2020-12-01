@@ -6,9 +6,11 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
+import Data.Bits
 import Data.Char
 import Data.Foldable
 import Data.List
+import Data.Maybe
 import Data.Text (Text, pack)
 import Data.Time
 import Discord
@@ -21,6 +23,7 @@ import qualified Database.Persist as P
 import qualified Database.Persist.Sql as SQL
 import System.Environment
 import System.Exit
+import Text.Read ( readMaybe )
 
 import Buttons
 import Commands
@@ -100,9 +103,17 @@ runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
   Success whichComm -> case whichComm of
     ButtonComm comm -> inGuild (messageGuild msg) $ \gid -> do
       mem <- run $ GetGuildMember gid (userId $ messageAuthor msg)
-      assertTrue $ 753003004407447644 `elem` memberRoles mem -- hardcoding!
-      reactPositive
-      runButtonComm comm
+      usrIsAdmin <- isAdmin gid mem
+      if usrIsAdmin then do
+        res <- runButtonComm comm gid
+        case res of
+          Right () -> reactPositive
+          Left _ -> reactNegative
+        else do
+          reactNegative
+          void $ run $ CreateMessage (messageChannel msg) "You must be an administrator to run this command."
+
+        
   Failure f -> do
     let (hlp, status, _) = execFailure f ""
         helpStr = "```" ++ show hlp ++ "```"
@@ -120,17 +131,40 @@ runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
     reactPositive = run $ CreateReaction (messageChannel msg, messageId msg) ":white_check_mark:"
     reactNegative = run $ CreateReaction (messageChannel msg, messageId msg) ":x:"
 
-runButtonComm :: ButtonComm -> Handler ()
-runButtonComm btn = case btn of
-  AddButton chan emoji role txt -> do
-    msg <- run $ CreateMessage chan txt
-    void $ runDB $ P.insert $ Button (fromEnum chan) (fromEnum $ messageId msg) emoji (fromEnum role)
-    logS $ "Created button in channel " <> show chan <> " on message " <> show (messageId msg) <> " with emoji " <> show emoji <> " for role " <> show role
-    run $ CreateReaction (chan, messageId msg) emoji
-  InsertButton chan emoji role mid -> do
-    void $ runDB $ P.insert $ Button (fromEnum chan) (fromEnum mid) emoji (fromEnum role)
-    logS $ "Inserted button in channel " <> show chan <> " on message " <> show mid <> " with emoji " <> show emoji <> " for role " <> show role
-    run $ CreateReaction (chan, mid) emoji
+data ButtonCommError 
+  = RoleIdNameError (NameError Role) 
+  | ChannelIdNameError (NameError (Text, ChannelId))
+
+runButtonComm :: ButtonComm -> GuildId -> Handler (Either ButtonCommError ())
+runButtonComm btn gid = case btn of
+  AddButton chanName emoji rName txt -> do
+    mrid <- tryGetRoleByName gid rName
+    case mrid of
+      Left err -> pure $ Left (RoleIdNameError err)
+      Right rid -> do
+        mchan <- tryGetChannelByName gid chanName
+        case mchan of
+          Left err -> pure $ Left (ChannelIdNameError err)
+          Right chan -> do
+            msg <- run $ CreateMessage chan txt
+            void $ runDB $ P.insert $ Button (fromEnum chan) (fromEnum $ messageId msg) emoji (fromEnum rid)
+            logS $ "Created button in channel " <> show chan <> " on message " <> show (messageId msg) <> " with emoji " <> show emoji <> " for role " <> show rid
+            run $ CreateReaction (chan, messageId msg) emoji
+            pure $ Right ()
+    
+  InsertButton chanName emoji rName mid -> do
+    mrid <- tryGetRoleByName gid rName
+    case mrid of
+      Left err -> pure $ Left (RoleIdNameError err)
+      Right rid -> do
+        mchan <- tryGetChannelByName gid chanName
+        case mchan of
+          Left err -> pure $ Left (ChannelIdNameError err)
+          Right chan -> do
+            void $ runDB $ P.insert $ Button (fromEnum chan) (fromEnum mid) emoji (fromEnum rid)
+            logS $ "Inserted button in channel " <> show chan <> " on message " <> show mid <> " with emoji " <> show emoji <> " for role " <> show rid
+            run $ CreateReaction (chan, mid) emoji
+            pure $ Right ()
 
 logS :: String -> Handler ()
 logS s = liftIO $ do
@@ -141,7 +175,8 @@ logS s = liftIO $ do
   appendFile "log.txt" output
 
 addPandaRole :: UserId -> GuildId -> Handler ()
-addPandaRole usr gid = run $ AddGuildMemberRole gid usr 762055744555188234 -- Hardcoded! TODO Change this
+addPandaRole usr gid = when (gid == 753002885633146932) $
+  run $ AddGuildMemberRole gid usr 762055744555188234 -- Hardcoded! TODO Change this
 
 wordsWithQuotes :: Text -> [Text]
 wordsWithQuotes = concat . wordsEveryOther . T.splitOn "\""
@@ -164,3 +199,36 @@ stripEmoji emoji = if T.all isAscii emoji
 
 inGuild :: Maybe GuildId -> (GuildId -> Handler ()) -> Handler ()
 inGuild = flip $ maybe (pure ())
+
+data NameError a = NameNotFound | NameAmbiguous [a]
+
+tryGetRoleByName :: GuildId -> Text -> Handler (Either (NameError Role) RoleId)
+tryGetRoleByName gid name = do
+  roles <- run $ GetGuildRoles gid
+  pure $ tryGetIdByName roles roleName roleId name
+
+tryGetChannelByName :: GuildId -> Text -> Handler (Either (NameError (Text, ChannelId)) ChannelId)
+tryGetChannelByName gid name = do
+  mchans <- run $ GetGuildChannels gid
+  let chans = catMaybes $ isText <$> mchans
+  pure $ tryGetIdByName chans fst snd name
+  where 
+    isText chan = case chan of
+      ChannelText {} -> Just (channelName chan, channelId chan)
+      _ -> Nothing
+
+tryGetIdByName :: [a] -> ( a -> Text) -> (a -> Snowflake) -> Text -> Either (NameError a) Snowflake
+tryGetIdByName vals toText toId name = case filter ((==name) . toText) vals of
+  [] -> case readMaybe (T.unpack name) :: Maybe Snowflake of
+    Nothing -> Left NameNotFound
+    Just flake -> Right flake
+  [x] -> Right $ toId x
+  xs -> Left (NameAmbiguous xs)
+
+isAdmin :: GuildId -> GuildMember -> Handler Bool
+isAdmin gid mem = do
+  roles <- run $ GetGuildRoles gid
+  pure $ any (`elem` memberRoles mem) (roleId <$> filter isAdminRole roles)
+  where
+    isSet b n = (b .&. n) == b
+    isAdminRole = isSet 8 . rolePerms
