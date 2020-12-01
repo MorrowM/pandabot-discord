@@ -10,8 +10,6 @@ import System.Environment
 import Bot
 import Types
 
-import Options.Applicative.Help.Chunk
-
 main :: IO ()
 main = do
   tok <- pack <$> getEnv "PANDABOT_TOK"
