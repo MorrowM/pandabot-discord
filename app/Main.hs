@@ -61,23 +61,21 @@ eventHandler event = case event of
   MessageReactionAdd rinfo -> do
     myUid <- myUserId
     assertTrue $ myUid /= reactionUserId rinfo
-    case reactionGuildId rinfo of
-      Nothing -> pure ()
-      Just gid -> do
-        logS $ "User " <> show (reactionUserId rinfo) <> " reacted with " <> show (emojiName $ reactionEmoji rinfo) <> " on message " <> show (reactionMessageId rinfo)
-        mem <- run $ GetGuildMember gid (reactionUserId rinfo)
-        btns <- buttons
-        for_ btns $ \button -> do
-          let bmsg = toEnum $ buttonMessage button
-              bemoji = buttonEmoji button
-              bchannel = toEnum $ buttonChannel button
-              brole = toEnum $ buttonRole button
-          when (bmsg == reactionMessageId rinfo && emojiName (reactionEmoji rinfo) == stripEmoji bemoji) $ do
-            if brole `elem` memberRoles mem
-              then removeRole brole (reactionUserId rinfo) gid
-              else giveRole brole (reactionUserId rinfo) gid
-            run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bemoji
-            logS $ "User " <> show (reactionUserId rinfo) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
+    inGuild (reactionGuildId rinfo) $ \gid -> do
+      logS $ "User " <> show (reactionUserId rinfo) <> " reacted with " <> show (emojiName $ reactionEmoji rinfo) <> " on message " <> show (reactionMessageId rinfo)
+      mem <- run $ GetGuildMember gid (reactionUserId rinfo)
+      btns <- buttons
+      for_ btns $ \button -> do
+        let bmsg = toEnum $ buttonMessage button
+            bemoji = buttonEmoji button
+            bchannel = toEnum $ buttonChannel button
+            brole = toEnum $ buttonRole button
+        when (bmsg == reactionMessageId rinfo && emojiName (reactionEmoji rinfo) == stripEmoji bemoji) $ do
+          if brole `elem` memberRoles mem
+            then removeRole brole (reactionUserId rinfo) gid
+            else giveRole brole (reactionUserId rinfo) gid
+          run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bemoji
+          logS $ "User " <> show (reactionUserId rinfo) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
   MessageCreate msg -> handleMessageCreate msg
   other -> logS . head . words . show $ other
 
@@ -100,13 +98,11 @@ handleComm msg =
 runComm :: [String] -> Message -> Handler ()
 runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
   Success whichComm -> case whichComm of
-    ButtonComm comm -> case messageGuild msg of
-      Nothing -> pure ()
-      Just gid -> do
-        mem <- run $ GetGuildMember gid (userId $ messageAuthor msg)
-        assertTrue $ 753003004407447644 `elem` memberRoles mem -- hardcoding!
-        reactPositive
-        runButtonComm comm
+    ButtonComm comm -> inGuild (messageGuild msg) $ \gid -> do
+      mem <- run $ GetGuildMember gid (userId $ messageAuthor msg)
+      assertTrue $ 753003004407447644 `elem` memberRoles mem -- hardcoding!
+      reactPositive
+      runButtonComm comm
   Failure f -> do
     let (hlp, status, _) = execFailure f ""
         helpStr = "```" ++ show hlp ++ "```"
@@ -165,3 +161,6 @@ stripEmoji :: Text -> Text
 stripEmoji emoji = if T.all isAscii emoji
   then T.takeWhile (/= ':') . T.drop 2 $ emoji
   else emoji
+
+inGuild :: Maybe GuildId -> (GuildId -> Handler ()) -> Handler ()
+inGuild = flip $ maybe (pure ())
