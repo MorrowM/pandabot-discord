@@ -30,6 +30,7 @@ rootSubComm =
 data ButtonComm 
   = AddButton Text Text Text Text
   | InsertButton Text Text Text MessageId
+  | RemoveButton Text Text Text MessageId
 
 addOptions :: Parser ButtonComm
 addOptions =
@@ -52,4 +53,13 @@ buttonSubComm =
   hsubparser
     ( command "add" (info addOptions (progDesc "Add a button"))
    <> command "insert" (info insertOptions (progDesc "Insert a button into an existing message"))
+   <> command "remove" (info removeOptions (progDesc "Remove an existing button from a message"))
     )
+
+removeOptions :: Parser ButtonComm
+removeOptions =
+  RemoveButton
+    <$> argument str (metavar "CHANNEL")
+    <*> argument str (metavar "EMOJI")
+    <*> argument str (metavar "ROLE")
+    <*> argument auto (metavar "MESSAGE_ID")

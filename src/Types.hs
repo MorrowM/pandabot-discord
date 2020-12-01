@@ -3,12 +3,15 @@ module Types
   ( Handler
   , runHandler
   , runDB
+  , execDB
   , run
+  , exec
   , catchErr
   , raiseErr
   , assertTrue
   ) where
 
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Except
@@ -39,6 +42,9 @@ runHandler dis h = do
 runDB :: DatabaseAction a -> Handler a
 runDB = liftIO . db
 
+execDB :: DatabaseAction a -> Handler ()
+execDB = void . runDB
+
 run :: (FromJSON a, Request (r a)) => r a -> Handler a
 run r = do
   dis <- lift ask
@@ -46,6 +52,9 @@ run r = do
   case res of
     Left err -> throwE . T.pack . show $ err
     Right a -> pure a
+
+exec :: (FromJSON a, Request (r a)) => r a -> Handler ()
+exec = void . run
 
 catchErr :: Handler () -> Handler ()
 catchErr h = do
