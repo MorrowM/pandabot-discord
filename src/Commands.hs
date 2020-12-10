@@ -3,6 +3,7 @@
 module Commands 
   ( Comm (..)
   , ButtonComm (..)
+  , NotifPointsComm (..)
   , rootComm
   ) where
 
@@ -10,7 +11,9 @@ import Data.Text (Text)
 import Discord.Types
 import Options.Applicative
 
-newtype Comm = ButtonComm ButtonComm
+data Comm 
+  = ButtonComm ButtonComm
+  | NotifPointsComm NotifPointsComm
 
 rootComm :: ParserInfo Comm
 rootComm =
@@ -25,6 +28,7 @@ rootSubComm :: Parser Comm
 rootSubComm =
   hsubparser
     ( command "button" (info (ButtonComm <$> buttonSubComm) (progDesc "Manage role buttons"))
+   <> command "notifpoints" (info (NotifPointsComm <$> notifPointsSubComm) (progDesc "See how much you've contributed to the #NotifGang"))
     )
 
 data ButtonComm 
@@ -63,3 +67,8 @@ removeOptions =
     <*> argument str (metavar "EMOJI")
     <*> argument str (metavar "ROLE")
     <*> argument auto (metavar "MESSAGE_ID")
+
+data NotifPointsComm = ViewSelf
+
+notifPointsSubComm :: Parser NotifPointsComm
+notifPointsSubComm = pure ViewSelf

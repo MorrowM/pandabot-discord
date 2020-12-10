@@ -26,4 +26,9 @@ share
     emoji Text
     role Int
     deriving Show
+
+  MemberInfo
+    userId Int
+    guildId Int
+    notifpoints Int
 |]

@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Bot where
+module Bot 
+( onStart
+, eventHandler
+) where
 
 import Control.Monad
 import Control.Monad.IO.Class
@@ -47,26 +50,29 @@ eventHandler event = case event of
   PresenceUpdate _ -> pure ()
   Ready {} -> pure ()
   GuildCreate {} -> pure ()
-  MessageReactionAdd rinfo -> do
-    myUid <- myUserId
-    assertTrue $ myUid /= reactionUserId rinfo
-    inGuild (reactionGuildId rinfo) $ \gid -> do
-      logS $ "User " <> show (reactionUserId rinfo) <> " reacted with " <> show (emojiName $ reactionEmoji rinfo) <> " on message " <> show (reactionMessageId rinfo)
-      mem <- run $ GetGuildMember gid (reactionUserId rinfo)
-      btns <- buttons
-      for_ btns $ \button -> do
-        let bmsg = toEnum $ buttonMessage button
-            bemoji = buttonEmoji button
-            bchannel = toEnum $ buttonChannel button
-            brole = toEnum $ buttonRole button
-        when (bmsg == reactionMessageId rinfo && emojiName (reactionEmoji rinfo) == stripEmoji bemoji) $ do
-          if brole `elem` memberRoles mem
-            then removeRole brole (reactionUserId rinfo) gid
-            else giveRole brole (reactionUserId rinfo) gid
-          run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bemoji
-          logS $ "User " <> show (reactionUserId rinfo) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
+  MessageReactionAdd rinfo -> buttonHandler rinfo
   MessageCreate msg -> handleMessageCreate msg
   other -> logS . head . words . show $ other
+
+buttonHandler :: ReactionInfo -> Handler ()
+buttonHandler rinfo = do
+  myUid <- myUserId
+  assertTrue $ myUid /= reactionUserId rinfo
+  inGuild (reactionGuildId rinfo) $ \gid -> do
+    logS $ "User " <> show (reactionUserId rinfo) <> " reacted with " <> show (emojiName $ reactionEmoji rinfo) <> " on message " <> show (reactionMessageId rinfo)
+    mem <- run $ GetGuildMember gid (reactionUserId rinfo)
+    btns <- buttons
+    for_ btns $ \button -> do
+      let bmsg = toEnum $ buttonMessage button
+          bemoji = buttonEmoji button
+          bchannel = toEnum $ buttonChannel button
+          brole = toEnum $ buttonRole button
+      when (bmsg == reactionMessageId rinfo && emojiName (reactionEmoji rinfo) == stripEmoji bemoji) $ do
+        if brole `elem` memberRoles mem
+          then removeRole brole (reactionUserId rinfo) gid
+          else giveRole brole (reactionUserId rinfo) gid
+        run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bemoji
+        logS $ "User " <> show (reactionUserId rinfo) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
 
 handleMessageCreate :: Message -> Handler ()
 handleMessageCreate msg = catchErr $ do
@@ -105,7 +111,14 @@ runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
         else do
           reactNegative
           reply "You must be an administrator to run this command."
-        
+    NotifPointsComm comm -> inGuild (messageGuild msg) $ \gid -> do
+      res <- runNotifPointsComm comm gid (messageAuthor msg) reply
+      case res of
+        Right () -> reactPositive
+        Left _ -> do
+          reactNegative
+          reply "Sorry, an unknown error has occured while handling your request"
+
   Failure f -> do
     let (hlp, status, _) = execFailure f ""
         helpStr = "```" ++ show hlp ++ "```"
@@ -149,6 +162,17 @@ runButtonComm btn gid = case btn of
       remainingRoles <- runDB $ P.selectFirst [ButtonChannel ==. fromEnum chan, ButtonMessage ==. fromEnum mid, ButtonEmoji ==. emoji] []
       when (isNothing remainingRoles) $ exec $ DeleteOwnReaction (chan, mid) emoji
 
+runNotifPointsComm :: NotifPointsComm -> GuildId -> User -> (Text -> Handler ()) -> Handler (Either NotifPointsCommError ())
+runNotifPointsComm comm gid usr reply = do
+  case comm of
+    ViewSelf -> do
+      mpoints <- runDB $ selectFirst [MemberInfoUserId P.==. fromEnum (userId usr), MemberInfoGuildId P.==. fromEnum gid] []
+      let points = maybe 0 (memberInfoNotifpoints . entityVal) mpoints
+      reply $ userName usr <> " has " <> tshow points <> " points"
+      pure $ Right ()
+
+data NotifPointsCommError
+
 withRoleAndChannel :: GuildId -> Text -> Text -> (RoleId -> ChannelId -> Handler a) -> Handler (Either ButtonCommError a)
 withRoleAndChannel gid rName chanName f = do
   mrid <- tryGetRoleByName gid rName
@@ -160,7 +184,7 @@ withRoleAndChannel gid rName chanName f = do
         Left err -> pure $ Left (ChannelIdNameError err)
         Right chan -> Right <$> f rid chan
 
-logS :: String -> Handler ()
+logS :: MonadIO m => String -> m ()
 logS s = liftIO $ do
   t <- getCurrentTime
   let fmt = formatTime defaultTimeLocale "[%F %T] " t
@@ -226,3 +250,6 @@ isAdmin gid mem = do
   where
     isSet b n = (b .&. n) == b
     isAdminRole = isSet 8 . rolePerms
+
+tshow :: Show a => a -> Text
+tshow = T.pack . show
