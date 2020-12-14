@@ -15,10 +15,8 @@ import Discord.Requests
 import Discord.Types
     ( GuildId,
       UserId,
-      Message(messageText, messageChannel, messageId, messageGuild,
-              messageAuthor),
-      Event(MessageCreate, GuildMemberAdd, TypingStart, PresenceUpdate,
-            Ready, GuildCreate, MessageReactionAdd),
+      Message(..),
+      Event(..),
       GuildMember(memberUser),
       Role(roleId),
       User(userName, userId) )
@@ -36,9 +34,9 @@ import Buttons
     ( runButtonComm,
       buttonHandler,
       ButtonCommError(ChannelIdNameError, RoleIdNameError) )
-import Commands ( rootComm, Comm(NotifPointsComm, ButtonComm) )
+import Commands ( rootComm, Comm(..) )
 import Config ( welcomeRole )
-import NotifPoints ( runNotifPointsComm, handlePointAssign )
+import NotifPoints ( runNotifPointsComm, runLeaderboardComm, handlePointAssign, handlePointRemove )
 import Schema ( migrateAll )
 import Types
     ( assertTrue,
@@ -70,6 +68,7 @@ eventHandler event = case event of
   Ready {} -> pure ()
   GuildCreate {} -> pure ()
   MessageReactionAdd rinfo -> buttonHandler rinfo *> handlePointAssign rinfo
+  MessageReactionRemove rinfo -> handlePointRemove rinfo
   MessageCreate msg -> handleMessageCreate msg
   other -> logS . head . words . show $ other
 
@@ -118,6 +117,14 @@ runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
           reactNegative
           reply "Sorry, an unknown error has occured while handling your request"
 
+    LeaderboardComm comm -> inGuild (messageGuild msg) $ \gid -> do
+      res <- runLeaderboardComm comm gid reply
+      case res of
+        Right () -> reactPositive
+        Left _ -> do
+          reactNegative
+          reply "Sorry, an unknown error has occured while handling your request"
+        
   Failure f -> do
     let (hlp, status, _) = execFailure f ""
         helpStr = "```" ++ show hlp ++ "```"

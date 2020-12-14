@@ -4,6 +4,7 @@ module Commands
   ( Comm (..)
   , ButtonComm (..)
   , NotifPointsComm (..)
+  , LeaderboardComm (..)
   , rootComm
   ) where
 
@@ -28,6 +29,7 @@ import Options.Applicative
 data Comm 
   = ButtonComm ButtonComm
   | NotifPointsComm NotifPointsComm
+  | LeaderboardComm LeaderboardComm
 
 rootComm :: ParserInfo Comm
 rootComm =
@@ -42,7 +44,8 @@ rootSubComm :: Parser Comm
 rootSubComm =
   hsubparser
     ( command "button" (info (ButtonComm <$> buttonSubComm) (progDesc "Manage role buttons"))
-   <> command "notifpoints" (info (NotifPointsComm <$> notifPointsSubComm) (progDesc "See how much you've contributed to the #NotifGang"))
+   <> command "points" (info (NotifPointsComm <$> notifPointsSubComm) (progDesc "How many do you have?"))
+   <> command "leaderboard" (info (LeaderboardComm <$> leaderboardSubComm) (progDesc "Who has the most points?"))
     )
 
 data ButtonComm 
@@ -86,3 +89,8 @@ data NotifPointsComm = ViewSelf
 
 notifPointsSubComm :: Parser NotifPointsComm
 notifPointsSubComm = pure ViewSelf
+
+data LeaderboardComm = ViewLeaderboard
+
+leaderboardSubComm :: Parser LeaderboardComm
+leaderboardSubComm = pure ViewLeaderboard
