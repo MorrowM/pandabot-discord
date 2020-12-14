@@ -9,8 +9,9 @@ module Types
   , catchErr
   , raiseErr
   , assertTrue
+  , assertJust
   , getDis
-  , getWelcomeRole
+  , getConfig
   , NameError (..)
   ) where
 
@@ -23,7 +24,6 @@ import Control.Monad.Trans.Reader ( ReaderT(runReaderT), ask )
 import Data.Text (Text)
 import Data.Time ( defaultTimeLocale, getCurrentTime, formatTime )
 import Discord ( FromJSON, DiscordHandle, restCall )
-import Discord.Types ( RoleId )
 import Discord.Internal.Rest.Prelude ( Request )
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -77,13 +77,17 @@ assertTrue :: Bool -> Handler ()
 assertTrue True = return ()
 assertTrue False = raiseErr ""
 
+assertJust :: Maybe a -> Handler a
+assertJust Nothing = raiseErr ""
+assertJust (Just x) = pure x
+
 getApp :: Handler App
 getApp = lift ask
 
 getDis :: Handler DiscordHandle
 getDis = appDis <$> getApp
 
-getWelcomeRole :: Handler RoleId
-getWelcomeRole = welcomeRole <$> (appConfig <$> getApp)
+getConfig :: Handler Config
+getConfig = appConfig <$> getApp
 
 data NameError a = NameNotFound | NameAmbiguous [a]

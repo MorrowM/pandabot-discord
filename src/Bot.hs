@@ -5,10 +5,7 @@ module Bot
 , eventHandler
 ) where
 
-import Control.Monad ( when )
 import Control.Monad.IO.Class ( MonadIO(liftIO) )
-import Control.Monad.Trans.Class ( MonadTrans(lift) )
-import Control.Monad.Trans.Reader ( ask )
 import Data.List ( isPrefixOf )
 import Database.Persist.Sql ( runMigration )
 import Discord ( readCache, Cache(_currentUser) )
@@ -40,7 +37,8 @@ import Buttons
       buttonHandler,
       ButtonCommError(ChannelIdNameError, RoleIdNameError) )
 import Commands ( rootComm, Comm(NotifPointsComm, ButtonComm) )
-import NotifPoints ( runNotifPointsComm )
+import Config ( welcomeRole )
+import NotifPoints ( runNotifPointsComm, handlePointAssign )
 import Schema ( migrateAll )
 import Types
     ( assertTrue,
@@ -50,7 +48,7 @@ import Types
       runDB,
       Handler,
       NameError(NameAmbiguous, NameNotFound),
-      getWelcomeRole,
+      getConfig,
       getDis )
 import Util ( wordsWithQuotes, inGuild, isAdmin, logS )
 
@@ -71,7 +69,7 @@ eventHandler event = case event of
   PresenceUpdate _ -> pure ()
   Ready {} -> pure ()
   GuildCreate {} -> pure ()
-  MessageReactionAdd rinfo -> buttonHandler rinfo
+  MessageReactionAdd rinfo -> buttonHandler rinfo *> handlePointAssign rinfo
   MessageCreate msg -> handleMessageCreate msg
   other -> logS . head . words . show $ other
 
@@ -141,6 +139,6 @@ runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
 
 addPandaRole :: UserId -> GuildId -> Handler ()
 addPandaRole usr gid = do
-  welcome <- getWelcomeRole
-  run $ AddGuildMemberRole gid usr welcome -- Hardcoded! TODO Change this
+  welcome <- welcomeRole <$> getConfig
+  run $ AddGuildMemberRole gid usr welcome
 

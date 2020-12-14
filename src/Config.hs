@@ -23,15 +23,23 @@ data Config = Config
   { botToken :: Text
   , welcomeRole :: RoleId
   , pointAssignEmoji :: Text
+  , pointsRole :: RoleId
   }
 
 parseConfigFile :: FilePath -> ExceptT Text IO Config
 parseConfigFile file = do
-  (tok, welcomeRoleTxt, notifEmoji) <- withExceptT (pack . show . fst) $ do
+  (tok, welcomeRoleTxt, pointsRoleTxt, notifEmoji) <- withExceptT (pack . show . fst) $ do
     cp <- join $ liftIO $ readfile emptyCP file
     tok <- pack <$> get cp "DEFAULT" "bot-token"
     welcomeRoleTxt <- get cp "DEFAULT" "welcome-role"
+    pointsRoleTxt <- get cp "DEFAULT" "notifpoints-role"
     notifEmoji <- pack <$> get cp "DEFAULT" "notifpoints-emoji"
-    pure (tok, welcomeRoleTxt, notifEmoji)
-  rid <- maybe (throwE "invalid welcome-role") pure (readMaybe welcomeRoleTxt)
-  pure $ Config { welcomeRole = rid, botToken = tok, pointAssignEmoji = notifEmoji }
+    pure (tok, welcomeRoleTxt, pointsRoleTxt, notifEmoji)
+  welcomeRid <- maybe (throwE "invalid welcome-role") pure (readMaybe welcomeRoleTxt)
+  pointsRid <- maybe (throwE "invalid notifpoints-role") pure (readMaybe pointsRoleTxt)
+  pure $ Config 
+    { welcomeRole = welcomeRid
+    , botToken = tok
+    , pointAssignEmoji = notifEmoji
+    , pointsRole = pointsRid 
+    }
