@@ -9,25 +9,31 @@ module Types
   , catchErr
   , raiseErr
   , assertTrue
+  , getDis
+  , getWelcomeRole
+  , NameError (..)
   ) where
 
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Class
+import Control.Monad ( void )
+import Control.Monad.IO.Class ( MonadIO(liftIO) )
+import Control.Monad.Trans.Class ( MonadTrans(lift) )
 import Control.Monad.Trans.Except
-import Control.Monad.Trans.Reader
+    ( ExceptT(..), runExceptT, throwE )
+import Control.Monad.Trans.Reader ( ReaderT(runReaderT), ask )
 import Data.Text (Text)
-import Data.Time
-import Discord
-import Discord.Internal.Rest.Prelude
+import Data.Time ( defaultTimeLocale, getCurrentTime, formatTime )
+import Discord ( FromJSON, DiscordHandle, restCall )
+import Discord.Types ( RoleId )
+import Discord.Internal.Rest.Prelude ( Request )
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 
-import Database
+import Config ( App (..), Config (..) )
+import Database ( DatabaseAction, db )
 
-type Handler a = ExceptT Text (ReaderT DiscordHandle IO) a
+type Handler a = ExceptT Text (ReaderT App IO) a
 
-runHandler :: DiscordHandle -> Handler () -> IO ()
+runHandler :: App -> Handler () -> IO ()
 runHandler dis h = do
   eith <- flip runReaderT dis $ runExceptT h
   case eith of
@@ -47,7 +53,7 @@ execDB = void . runDB
 
 run :: (FromJSON a, Request (r a)) => r a -> Handler a
 run r = do
-  dis <- lift ask
+  dis <- getDis
   res <- liftIO $ restCall dis r
   case res of
     Left err -> throwE . T.pack . show $ err
@@ -70,3 +76,14 @@ raiseErr txt = ExceptT $ return $ Left txt
 assertTrue :: Bool -> Handler ()
 assertTrue True = return ()
 assertTrue False = raiseErr ""
+
+getApp :: Handler App
+getApp = lift ask
+
+getDis :: Handler DiscordHandle
+getDis = appDis <$> getApp
+
+getWelcomeRole :: Handler RoleId
+getWelcomeRole = welcomeRole <$> (appConfig <$> getApp)
+
+data NameError a = NameNotFound | NameAmbiguous [a]

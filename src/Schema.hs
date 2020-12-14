@@ -16,7 +16,9 @@ module Schema where
 
 import Data.Text (Text)
 import Database.Persist.TH
+    ( mkMigrate, mkPersist, persistLowerCase, share, sqlSettings )
 import Discord.Types
+    ( MessageId, UTCTime, ChannelId, GuildId, RoleId, UserId )
 import Instances ()
 
 share

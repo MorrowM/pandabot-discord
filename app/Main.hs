@@ -2,22 +2,26 @@
 
 module Main where
 
-import Data.Text (pack)
+import Control.Monad.Trans.Except (runExceptT)
 import Discord
+    ( runDiscord,
+      def,
+      RunDiscordOpts(discordOnStart, discordToken, discordOnEvent) )
 import qualified Data.Text.IO as TIO
-import System.Environment
 
-import Bot
-import Types
+import Bot ( eventHandler, onStart )
+import Config ( App (..), Config (..) , parseConfigFile)
+import Types ( runHandler )
 
 main :: IO ()
 main = do
-  tok <- pack <$> getEnv "PANDABOT_TOK"
-  userFacingError <-
-    runDiscord $
-      def
-        { discordOnStart = flip runHandler onStart,
-          discordToken = tok,
-          discordOnEvent = \dis e -> runHandler dis (eventHandler e)
+  mcfg <- runExceptT (parseConfigFile "bot.cfg")
+  case mcfg of
+    Left err -> TIO.putStrLn $ "error parsing configuration: " <> err
+    Right cfg -> do
+      userFacingError <- runDiscord $ def
+        { discordOnStart = \dis -> runHandler (App { appDis = dis, appConfig = cfg }) onStart,
+          discordToken = botToken cfg,
+          discordOnEvent = \dis e -> runHandler (App { appDis = dis, appConfig = cfg }) (eventHandler e)
         }
-  TIO.putStrLn userFacingError
+      TIO.putStrLn userFacingError

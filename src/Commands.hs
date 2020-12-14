@@ -8,8 +8,22 @@ module Commands
   ) where
 
 import Data.Text (Text)
-import Discord.Types
+import Discord.Types ( MessageId )
 import Options.Applicative
+    ( (<**>),
+      ParserInfo,
+      argument,
+      auto,
+      command,
+      fullDesc,
+      header,
+      info,
+      metavar,
+      progDesc,
+      str,
+      helper,
+      hsubparser,
+      Parser )
 
 data Comm 
   = ButtonComm ButtonComm

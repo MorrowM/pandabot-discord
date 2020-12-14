@@ -31,6 +31,7 @@ dependencies:
 - monad-logger
 - conduit
 - optparse-applicative
+- ConfigFile
 
 library:
   source-dirs: src

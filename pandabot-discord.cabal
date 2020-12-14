@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a3e23096adccb6abdad60d2fc38a8f73774c3900822f3bc9cc3ad5a206dcb11c
+-- hash: 40e79f11edc6c9b05e79c0922c8519b53f4a015622c1b32160b4745dfdaf1e0f
 
 name:           pandabot-discord
 version:        0.1.0.0
@@ -30,16 +30,20 @@ library
       Bot
       Buttons
       Commands
+      Config
       Database
       Instances
+      NotifPoints
       Schema
       Types
+      Util
   other-modules:
       Paths_pandabot_discord
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      ConfigFile
+    , base >=4.7 && <5
     , conduit
     , discord-haskell
     , monad-logger
@@ -60,7 +64,8 @@ executable pandabot-discord-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -O2
   build-depends:
-      base >=4.7 && <5
+      ConfigFile
+    , base >=4.7 && <5
     , conduit
     , discord-haskell
     , monad-logger
@@ -83,7 +88,8 @@ test-suite pandabot-discord-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      ConfigFile
+    , base >=4.7 && <5
     , conduit
     , discord-haskell
     , monad-logger
