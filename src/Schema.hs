@@ -16,19 +16,23 @@ module Schema where
 
 import Data.Text (Text)
 import Database.Persist.TH
+import Discord.Types
+import Instances ()
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
   [persistLowerCase|
   Button
-    channel Int
-    message Int 
+    channel ChannelId
+    message MessageId 
     emoji Text
-    role Int
+    role RoleId
     deriving Show
 
-  MemberInfo
-    userId Int
-    guildId Int
-    notifpoints Int
+  NotifPoint
+    message MessageId
+    guild GuildId
+    assignedBy UserId
+    assignedTo UserId
+    assignedAt UTCTime
 |]

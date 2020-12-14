@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 098e144ef6c46ea9d78974a7ffc2ff118c90c1309b5a6ad36fbcaabc118d2c38
+-- hash: a3e23096adccb6abdad60d2fc38a8f73774c3900822f3bc9cc3ad5a206dcb11c
 
 name:           pandabot-discord
 version:        0.1.0.0
@@ -31,6 +31,7 @@ library
       Buttons
       Commands
       Database
+      Instances
       Schema
       Types
   other-modules:

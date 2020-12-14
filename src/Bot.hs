@@ -63,10 +63,10 @@ buttonHandler rinfo = do
     mem <- run $ GetGuildMember gid (reactionUserId rinfo)
     btns <- buttons
     for_ btns $ \button -> do
-      let bmsg = toEnum $ buttonMessage button
+      let bmsg = buttonMessage button
           bemoji = buttonEmoji button
-          bchannel = toEnum $ buttonChannel button
-          brole = toEnum $ buttonRole button
+          bchannel = buttonChannel button
+          brole = buttonRole button
       when (bmsg == reactionMessageId rinfo && emojiName (reactionEmoji rinfo) == stripEmoji bemoji) $ do
         if brole `elem` memberRoles mem
           then removeRole brole (reactionUserId rinfo) gid
@@ -146,28 +146,27 @@ runButtonComm btn gid = case btn of
   AddButton chanName emoji rName txt -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
       msg <- run $ CreateMessage chan txt
-      execDB $ P.insert $ Button (fromEnum chan) (fromEnum $ messageId msg) emoji (fromEnum rid)
+      execDB $ P.insert $ Button chan (messageId msg) emoji rid
       logS $ "Created button in channel " <> show chan <> " on message " <> show (messageId msg) <> " with emoji " <> show emoji <> " for role " <> show rid
       exec $ CreateReaction (chan, messageId msg) emoji
     
   InsertButton chanName emoji rName mid -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
-      execDB $ P.insert $ Button (fromEnum chan) (fromEnum mid) emoji (fromEnum rid)
+      execDB $ P.insert $ Button chan mid emoji rid
       logS $ "Inserted button in channel " <> show chan <> " on message " <> show mid <> " with emoji " <> show emoji <> " for role " <> show rid
       exec $ CreateReaction (chan, mid) emoji
 
   RemoveButton chanName emoji rName mid -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
-      execDB $ P.deleteWhere [ButtonChannel ==. fromEnum chan, ButtonMessage ==. fromEnum mid, ButtonEmoji ==. emoji, ButtonRole ==. fromEnum rid]
-      remainingRoles <- runDB $ P.selectFirst [ButtonChannel ==. fromEnum chan, ButtonMessage ==. fromEnum mid, ButtonEmoji ==. emoji] []
+      execDB $ P.deleteWhere [ButtonChannel ==. chan, ButtonMessage ==. mid, ButtonEmoji ==. emoji, ButtonRole ==. rid]
+      remainingRoles <- runDB $ P.selectFirst [ButtonChannel ==. chan, ButtonMessage ==. mid, ButtonEmoji ==. emoji] []
       when (isNothing remainingRoles) $ exec $ DeleteOwnReaction (chan, mid) emoji
 
 runNotifPointsComm :: NotifPointsComm -> GuildId -> User -> (Text -> Handler ()) -> Handler (Either NotifPointsCommError ())
 runNotifPointsComm comm gid usr reply = do
   case comm of
     ViewSelf -> do
-      mpoints <- runDB $ selectFirst [MemberInfoUserId P.==. fromEnum (userId usr), MemberInfoGuildId P.==. fromEnum gid] []
-      let points = maybe 0 (memberInfoNotifpoints . entityVal) mpoints
+      points <- runDB $ count [NotifPointAssignedTo P.==. userId usr, NotifPointGuild P.==. gid]
       reply $ userName usr <> " has " <> tshow points <> " points"
       pure $ Right ()
 
