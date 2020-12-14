@@ -78,7 +78,7 @@ handleMessageCreate msg = catchErr $ do
 
 handleComm :: Message -> Handler ()
 handleComm msg =
-  catchErr $
+  catchErr $ do
     if "!help" `T.isPrefixOf` messageText msg
       then runComm ["-h"] msg
       else
@@ -89,55 +89,56 @@ handleComm msg =
           else pure ()
 
 runComm :: [String] -> Message -> Handler ()
-runComm args msg = catchErr $ case execParserPure defaultPrefs rootComm args of
-  Success whichComm -> case whichComm of
-    ButtonComm comm -> inGuild (messageGuild msg) $ \gid -> do
-      mem <- run $ GetGuildMember gid (userId $ messageAuthor msg)
-      usrIsAdmin <- isAdmin gid mem
-      
-      if usrIsAdmin then do
-        res <- runButtonComm comm gid
-        case res of
-          Right () -> reactPositive
-          Left err -> do
-            reactNegative
-            case err of
-              RoleIdNameError NameNotFound -> reply "Sorry, I couldn't find a role with this name."
-              RoleIdNameError (NameAmbiguous roles) -> reply $ "There are multiple roles with this name: " <> T.pack (show $ roleId <$> roles)
-              ChannelIdNameError NameNotFound -> reply "Sorry, I couldn't find a channel with this name."
-              ChannelIdNameError (NameAmbiguous chans) -> reply $ "There are multiple channels with this name: " <> T.pack (show $ snd <$> chans)
-        else do
-          reactNegative
-          reply "You must be an administrator to run this command."
-    NotifPointsComm comm -> inGuild (messageGuild msg) $ \gid -> do
-      res <- runNotifPointsComm comm gid (messageAuthor msg) reply
-      case res of
-        Right () -> reactPositive
-        Left _ -> do
-          reactNegative
-          reply "Sorry, an unknown error has occured while handling your request"
+runComm args msg = catchErr $ do
+  inGuild (messageGuild msg) $ \gid -> do
+    mem <- run $ GetGuildMember gid (userId $ messageAuthor msg)
+    usrIsAdmin <- isAdmin gid mem
+    case execParserPure defaultPrefs (rootComm usrIsAdmin) args of
+      Success whichComm -> case whichComm of
+        ButtonComm comm -> 
+          if usrIsAdmin then do
+            res <- runButtonComm comm gid
+            case res of
+              Right () -> reactPositive
+              Left err -> do
+                reactNegative
+                case err of
+                  RoleIdNameError NameNotFound -> reply "Sorry, I couldn't find a role with this name."
+                  RoleIdNameError (NameAmbiguous roles) -> reply $ "There are multiple roles with this name: " <> T.pack (show $ roleId <$> roles)
+                  ChannelIdNameError NameNotFound -> reply "Sorry, I couldn't find a channel with this name."
+                  ChannelIdNameError (NameAmbiguous chans) -> reply $ "There are multiple channels with this name: " <> T.pack (show $ snd <$> chans)
+            else do
+              reactNegative
+              reply "You must be an administrator to run this command."
+        NotifPointsComm comm -> do
+          res <- runNotifPointsComm comm gid (messageAuthor msg) reply
+          case res of
+            Right () -> reactPositive
+            Left _ -> do
+              reactNegative
+              reply "Sorry, an unknown error has occured while handling your request"
 
-    LeaderboardComm comm -> inGuild (messageGuild msg) $ \gid -> do
-      res <- runLeaderboardComm comm gid reply
-      case res of
-        Right () -> reactPositive
-        Left _ -> do
-          reactNegative
-          reply "Sorry, an unknown error has occured while handling your request"
-        
-  Failure f -> do
-    let (hlp, status, _) = execFailure f ""
-        helpStr = "```" ++ show hlp ++ "```"
-    assertTrue $ 
-      not ("Usage:  COMMAND\n" `isPrefixOf` maybe "" show (unChunk $ helpUsage hlp))
-      || status == ExitSuccess
+        LeaderboardComm comm -> do
+          res <- runLeaderboardComm comm gid reply
+          case res of
+            Right () -> reactPositive
+            Left _ -> do
+              reactNegative
+              reply "Sorry, an unknown error has occured while handling your request"
+            
+      Failure f -> do
+        let (hlp, status, _) = execFailure f ""
+            helpStr = "```" ++ show hlp ++ "```"
+        assertTrue $ 
+          not ("Usage:  COMMAND\n" `isPrefixOf` maybe "" show (unChunk $ helpUsage hlp))
+          || status == ExitSuccess
 
-    if status == ExitSuccess
-      then reactPositive
-      else reactNegative
+        if status == ExitSuccess
+          then reactPositive
+          else reactNegative
 
-    reply $ T.pack helpStr
-  _ -> pure ()
+        reply $ T.pack helpStr
+      _ -> pure ()
   where
     reply = exec . CreateMessage (messageChannel msg)
     reactPositive = run $ CreateReaction (messageChannel msg, messageId msg) ":white_check_mark:"

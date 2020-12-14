@@ -31,19 +31,19 @@ data Comm
   | NotifPointsComm NotifPointsComm
   | LeaderboardComm LeaderboardComm
 
-rootComm :: ParserInfo Comm
-rootComm =
+rootComm :: Bool -> ParserInfo Comm
+rootComm admin =
   info
-    (rootSubComm <**> helper)
+    (rootSubComm admin <**> helper)
     ( fullDesc
         <> progDesc "Pandabot"
         <> header "A bot for pandas! (duh)"
     )
 
-rootSubComm :: Parser Comm
-rootSubComm =
+rootSubComm :: Bool -> Parser Comm
+rootSubComm admin =
   hsubparser
-    ( command "button" (info (ButtonComm <$> buttonSubComm) (progDesc "Manage role buttons"))
+    ( (if admin then command "button" (info (ButtonComm <$> buttonSubComm) (progDesc "Manage role buttons")) else mempty)
    <> command "points" (info (NotifPointsComm <$> notifPointsSubComm) (progDesc "How many do you have?"))
    <> command "leaderboard" (info (LeaderboardComm <$> leaderboardSubComm) (progDesc "Who has the most points?"))
     )
