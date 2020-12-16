@@ -32,6 +32,9 @@ dependencies:
 - conduit
 - optparse-applicative
 - ConfigFile
+- aeson
+- lens
+- wreq
 
 library:
   source-dirs: src

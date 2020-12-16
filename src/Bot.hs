@@ -5,6 +5,8 @@ module Bot
 , eventHandler
 ) where
 
+import Control.Concurrent ( forkIO )
+import Control.Monad ( void )
 import Control.Monad.IO.Class ( MonadIO(liftIO) )
 import Data.List ( isPrefixOf )
 import Database.Persist.Sql ( runMigration )
@@ -38,6 +40,7 @@ import Commands ( rootComm, Comm(..) )
 import Config ( welcomeRole )
 import NotifPoints ( runNotifPointsComm, runLeaderboardComm, handlePointAssign, handlePointRemove )
 import Schema ( migrateAll )
+import Snappers ( checkForSnapshots )
 import Types
     ( assertTrue,
       catchErr,
@@ -56,6 +59,7 @@ onStart = catchErr $ do
   dis <- getDis
   cache <- liftIO $ readCache dis
   liftIO $ putStrLn $ "Connected as " <> show (userName $ _currentUser cache)
+  liftIO . void . forkIO $ checkForSnapshots dis
 
 eventHandler :: Event -> Handler ()
 eventHandler event = case event of
