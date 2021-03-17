@@ -77,6 +77,6 @@ runLeaderboardComm _ gid reply = do
 data LeaderboardCommError
 
 showPoints :: Int -> Text
-showPoints 0 = "no points"
-showPoints 1 = "1 point"
-showPoints n = tshow n <> " points"
+showPoints 0 = "no bamboo shoots"
+showPoints 1 = "1 bamboo shoot"
+showPoints n = tshow n <> " bamboo shoots"

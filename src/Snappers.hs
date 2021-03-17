@@ -55,7 +55,7 @@ checkForSnapshots dis = do
               else (snapshot ver, "snapshot-" <> snapshot ver)
           in void $ restCall dis $ CreateMessage 693537434784366605 $
             "@everyone\nMinecraft version " <> newVer <> " is out!\nA blog post should be available at https://www.minecraft.net/en-us/article/minecraft-" <> blogPostStr
-      liftIO $ threadDelay (60 * 10^6)
+      liftIO $ threadDelay (60 * 10^(6 :: Int))
     formatRelease = T.map $ \case
       '.' -> '-'
       x -> x
