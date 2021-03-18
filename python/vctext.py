@@ -25,25 +25,27 @@ async def on_ready():
 
 @client.event
 async def on_voice_state_update(member, before, after):
+    print(f'Before channel: {before.channel}')
+    print(f'After channel: {after.channel}')
     if (not before.channel or before.channel.id != SHECRET_CHANNEL_ID) and \
             (after.channel and after.channel.id == SHECRET_CHANNEL_ID):
         await member.add_roles(SHECRET_ROLE_ID, reason='User joined Stream Voice Chat')
-        print(f'Added the vctext role to {member.name}')
+        print(f'Added the stream vctext role to {member.name}')
 
     if (before.channel and before.channel.id == SHECRET_CHANNEL_ID) and \
             (not after.channel or after.channel.id != SHECRET_CHANNEL_ID):
         await member.remove_roles(SHECRET_ROLE_ID, reason='User left Stream Voice Chat')
-        print(f'Removed the vctext role from {member.name}')
+        print(f'Removed the stream vctext role from {member.name}')
 
     if (not before.channel or before.channel.id != VCTEXT_CHANNEL_ID) and \
             (after.channel and after.channel.id == VCTEXT_CHANNEL_ID):
         await member.add_roles(VCTEXT_ROLE_ID, reason='User joined General Voice Chat')
-        print(f'Added the vctext role to {member.name}')
+        print(f'Added the general vctext role to {member.name}')
 
     if (before.channel and before.channel.id == VCTEXT_CHANNEL_ID) and \
             (not after.channel or after.channel.id != VCTEXT_CHANNEL_ID):
         await member.remove_roles(VCTEXT_ROLE_ID, reason='User left General Voice Chat')
-        print(f'Removed the vctext role from {member.name}')
+        print(f'Removed the general vctext role from {member.name}')
 
 
 client.run(BOT_TOKEN)
