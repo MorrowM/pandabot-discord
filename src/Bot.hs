@@ -37,7 +37,7 @@ import Buttons
       buttonHandler,
       ButtonCommError(ChannelIdNameError, RoleIdNameError) )
 import Commands ( rootComm, Comm(..) )
-import Config ( welcomeRole )
+import Config (reactPositiveEmoji, welcomeRole)
 import NotifPoints ( runNotifPointsComm, runLeaderboardComm, handlePointAssign, handlePointRemove )
 import Schema ( migrateAll )
 import Snappers ( checkForSnapshots )
@@ -145,7 +145,10 @@ runComm args msg = catchErr $ do
       _ -> pure ()
   where
     reply = exec . CreateMessage (messageChannel msg)
-    reactPositive = run $ CreateReaction (messageChannel msg, messageId msg) ":white_check_mark:"
+    reactPositive = do
+      emo <- reactPositiveEmoji <$> getConfig
+      liftIO $ print emo
+      run $ CreateReaction (messageChannel msg, messageId msg) emo
     reactNegative = run $ CreateReaction (messageChannel msg, messageId msg) ":x:"
 
 
