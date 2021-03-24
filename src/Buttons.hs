@@ -1,4 +1,4 @@
-module Buttons 
+module Buttons
   ( giveRole
   , removeRole
   , buttons
@@ -7,48 +7,30 @@ module Buttons
   , ButtonCommError (..)
   ) where
 
-import Control.Monad ( when )
-import Data.Foldable ( for_ )
-import Data.Maybe ( isNothing )
-import Data.Text (Text)
-import Database.Persist.Sql
-    ( (==.),
-      selectList,
-      Entity(entityVal),
-      PersistQueryRead(selectFirst),
-      PersistQueryWrite(deleteWhere),
-      PersistStoreWrite(insert) )
-import Discord.Requests
-    ( ChannelRequest(DeleteOwnReaction, DeleteUserReaction,
-                     CreateMessage, CreateReaction),
-      GuildRequest(GetGuildMember, AddGuildMemberRole,
-                   RemoveGuildMemberRole) )
-import Discord.Types
-    ( ChannelId,
-      GuildId,
-      RoleId,
-      UserId,
-      Message(messageId),
-      ReactionInfo(reactionGuildId, reactionMessageId, reactionEmoji,
-                   reactionUserId),
-      Emoji(emojiName),
-      GuildMember(memberRoles),
-      Role )
+import           Control.Monad        (when)
+import           Data.Foldable        (for_)
+import           Data.Maybe           (isNothing)
+import           Data.Text            (Text)
+import           Database.Persist.Sql (Entity (entityVal),
+                                       PersistQueryRead (selectFirst),
+                                       PersistQueryWrite (deleteWhere),
+                                       PersistStoreWrite (insert), selectList,
+                                       (==.))
+import           Discord.Requests     (ChannelRequest (CreateMessage, CreateReaction, DeleteOwnReaction, DeleteUserReaction),
+                                       GuildRequest (AddGuildMemberRole, GetGuildMember, RemoveGuildMemberRole))
+import           Discord.Types        (ChannelId, Emoji (emojiName), GuildId,
+                                       GuildMember (memberRoles),
+                                       Message (messageId),
+                                       ReactionInfo (reactionEmoji, reactionGuildId, reactionMessageId, reactionUserId),
+                                       Role, RoleId, UserId)
 
-import Commands ( ButtonComm(..) )
-import Schema
-    ( Button(..),
-      EntityField(ButtonEmoji, ButtonRole, ButtonChannel,
-                  ButtonMessage) )
-import Types
-    ( assertTrue, exec, execDB, run, runDB, Handler, NameError )
-import Util
-    ( myUserId,
-      stripEmoji,
-      inGuild,
-      tryGetRoleByName,
-      tryGetChannelByName,
-      logS )
+import           Commands             (ButtonComm (..))
+import           Schema               (Button (..),
+                                       EntityField (ButtonChannel, ButtonEmoji, ButtonMessage, ButtonRole))
+import           Types                (Handler, NameError, assertTrue, exec,
+                                       execDB, run, runDB)
+import           Util                 (inGuild, logS, myUserId, stripEmoji,
+                                       tryGetChannelByName, tryGetRoleByName)
 
 
 giveRole :: RoleId -> UserId -> GuildId -> Handler ()
@@ -88,7 +70,7 @@ runButtonComm btn gid = case btn of
       execDB $ insert $ Button chan (messageId msg) emoji rid
       logS $ "Created button in channel " <> show chan <> " on message " <> show (messageId msg) <> " with emoji " <> show emoji <> " for role " <> show rid
       exec $ CreateReaction (chan, messageId msg) emoji
-    
+
   InsertButton chanName emoji rName mid -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
       execDB $ insert $ Button chan mid emoji rid
@@ -102,8 +84,8 @@ runButtonComm btn gid = case btn of
       when (isNothing remainingRoles) $ exec $ DeleteOwnReaction (chan, mid) emoji
 
 
-data ButtonCommError 
-  = RoleIdNameError (NameError Role) 
+data ButtonCommError
+  = RoleIdNameError (NameError Role)
   | ChannelIdNameError (NameError (Text, ChannelId))
 
 withRoleAndChannel :: GuildId -> Text -> Text -> (RoleId -> ChannelId -> Handler a) -> Handler (Either ButtonCommError a)
@@ -114,5 +96,5 @@ withRoleAndChannel gid rName chanName f = do
     Right rid -> do
       mchan <- tryGetChannelByName gid chanName
       case mchan of
-        Left err -> pure $ Left (ChannelIdNameError err)
+        Left err   -> pure $ Left (ChannelIdNameError err)
         Right chan -> Right <$> f rid chan

@@ -4,11 +4,11 @@ module Database
   )
 where
 
-import Conduit ( runResourceT, ResourceT )
-import Control.Monad.Logger ( runStdoutLoggingT, LoggingT )
-import Data.Text (Text ())
-import Database.Persist.Sqlite
-    ( runSqlConn, withSqliteConn, SqlPersistT )
+import           Conduit                 (ResourceT, runResourceT)
+import           Control.Monad.Logger    (LoggingT, runStdoutLoggingT)
+import           Data.Text               (Text)
+import           Database.Persist.Sqlite (SqlPersistT, runSqlConn,
+                                          withSqliteConn)
 
 type DatabaseAction a = SqlPersistT (LoggingT (ResourceT IO)) a
 

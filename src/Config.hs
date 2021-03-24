@@ -5,25 +5,26 @@ module Config
   )
 where
 
-import Control.Monad (join)
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Except (ExceptT, throwError, withExceptT, MonadError)
-import Data.ConfigFile (Get_C (get), emptyCP, readfile)
-import Data.Text (Text, pack)
-import Discord (DiscordHandle)
-import Discord.Types (Emoji, RoleId)
-import Text.Read (readMaybe)
+import           Control.Monad          (join)
+import           Control.Monad.Except   (ExceptT, MonadError, throwError,
+                                         withExceptT)
+import           Control.Monad.IO.Class (MonadIO (liftIO))
+import           Data.ConfigFile        (Get_C (get), emptyCP, readfile)
+import           Data.Text              (Text, pack)
+import           Discord                (DiscordHandle)
+import           Discord.Types          (Emoji, RoleId)
+import           Text.Read              (readMaybe)
 
 data App = App
-  { appDis :: DiscordHandle,
+  { appDis    :: DiscordHandle,
     appConfig :: Config
   }
 
 data Config = Config
-  { botToken :: Text,
-    welcomeRole :: RoleId,
-    pointAssignEmoji :: Text,
-    pointsRole :: RoleId,
+  { botToken           :: Text,
+    welcomeRole        :: RoleId,
+    pointAssignEmoji   :: Text,
+    pointsRole         :: RoleId,
     reactPositiveEmoji :: Text
   }
 

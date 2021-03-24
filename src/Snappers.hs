@@ -1,26 +1,26 @@
 module Snappers where
 
-import Control.Applicative
-import Control.Concurrent
-import Control.Lens
-import Control.Monad
-import Control.Monad.IO.Class
-import Data.Aeson
-import Data.Text ( Text )
-import qualified Data.Text as T
-import Discord
-import Discord.Requests
-import Network.Wreq
+import           Control.Applicative
+import           Control.Concurrent
+import           Control.Lens
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Data.Aeson
+import           Data.Text              (Text)
+import qualified Data.Text              as T
+import           Discord
+import           Discord.Requests
+import           Network.Wreq
 
-import Util
+import           Util
 
 data Latest = Latest
-  { release :: Text
+  { release  :: Text
   , snapshot :: Text
   } deriving (Show, Eq)
 
 instance FromJSON Latest where
-  parseJSON (Object v) = 
+  parseJSON (Object v) =
     Latest
     <$> (v .: "latest" >>= (.: "release"))
     <*> (v .: "latest" >>= (.: "snapshot"))
@@ -48,7 +48,7 @@ checkForSnapshots dis = do
       case mver of
         Nothing -> logS "There was an error decoding the version manifest"
         Just ver -> when (ver /= oldver) $
-          let (newVer, blogPostStr) = if release ver /= release oldver 
+          let (newVer, blogPostStr) = if release ver /= release oldver
               then (release ver, "java-edition-" <> formatRelease (release ver))
               else (snapshot ver, "snapshot-" <> snapshot ver)
           in void $ restCall dis $ CreateMessage 693537434784366605 $
@@ -56,4 +56,4 @@ checkForSnapshots dis = do
       liftIO $ threadDelay (60 * 10^(6 :: Int))
     formatRelease = T.map $ \case
       '.' -> '-'
-      x -> x
+      x   -> x

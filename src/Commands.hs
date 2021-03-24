@@ -1,4 +1,4 @@
-module Commands 
+module Commands
   ( Comm (..)
   , ButtonComm (..)
   , NotifPointsComm (..)
@@ -6,25 +6,14 @@ module Commands
   , rootComm
   ) where
 
-import Data.Text (Text)
-import Discord.Types ( MessageId )
-import Options.Applicative
-    ( (<**>),
-      ParserInfo,
-      argument,
-      auto,
-      command,
-      fullDesc,
-      header,
-      info,
-      metavar,
-      progDesc,
-      str,
-      helper,
-      hsubparser,
-      Parser )
+import           Data.Text           (Text)
+import           Discord.Types       (MessageId)
+import           Options.Applicative (Parser, ParserInfo, argument, auto,
+                                      command, fullDesc, header, helper,
+                                      hsubparser, info, metavar, progDesc, str,
+                                      (<**>))
 
-data Comm 
+data Comm
   = ButtonComm ButtonComm
   | NotifPointsComm NotifPointsComm
   | LeaderboardComm LeaderboardComm
@@ -46,7 +35,7 @@ rootSubComm admin =
    <> command "leaderboard" (info (LeaderboardComm <$> leaderboardSubComm) (progDesc "Who has the most points?"))
     )
 
-data ButtonComm 
+data ButtonComm
   = AddButton Text Text Text Text
   | InsertButton Text Text Text MessageId
   | RemoveButton Text Text Text MessageId

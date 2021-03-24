@@ -1,5 +1,5 @@
 
-module Types 
+module Types
   ( Handler
   , runHandler
   , runDB
@@ -14,20 +14,24 @@ module Types
   , NameError (..)
   ) where
 
-import Control.Monad ( void )
-import Control.Monad.Trans (MonadIO (liftIO), MonadTrans (lift))
-import Control.Monad.Except
-    ( ExceptT(..), runExceptT, throwError, MonadError )
-import Control.Monad.Reader ( ReaderT(runReaderT), ask, MonadReader )
-import Data.Text (Text)
-import Data.Time ( defaultTimeLocale, getCurrentTime, formatTime )
-import Discord ( FromJSON, DiscordHandle, restCall )
-import Discord.Internal.Rest.Prelude ( Request )
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+import           Control.Monad                 (void)
+import           Control.Monad.Except          (ExceptT (..), MonadError,
+                                                runExceptT, throwError)
+import           Control.Monad.Reader          (MonadReader,
+                                                ReaderT (runReaderT), ask)
+import           Control.Monad.Trans           (MonadIO (liftIO),
+                                                MonadTrans (lift))
+import           Data.Text                     (Text)
+import qualified Data.Text                     as T
+import qualified Data.Text.IO                  as TIO
+import           Data.Time                     (defaultTimeLocale, formatTime,
+                                                getCurrentTime)
+import           Discord                       (DiscordHandle, FromJSON,
+                                                restCall)
+import           Discord.Internal.Rest.Prelude (Request)
 
-import Config ( App (..), Config (..) )
-import Database ( DatabaseAction, db )
+import           Config                        (App (..), Config (..))
+import           Database                      (DatabaseAction, db)
 
 newtype Handler a = Handler
   { getHandler :: ExceptT Text (ReaderT App IO) a
@@ -58,7 +62,7 @@ run r = do
   res <- liftIO $ restCall dis r
   case res of
     Left err -> throwError . T.pack . show $ err
-    Right a -> pure a
+    Right a  -> pure a
 
 exec :: (FromJSON a, Request (r a)) => r a -> Handler ()
 exec = void . run
@@ -68,15 +72,15 @@ catchErr h = do
   dis <- ask
   eitherVal <- liftIO $ runReaderT (runExceptT $ getHandler h) dis
   case eitherVal of
-    Left txt -> liftIO $ TIO.putStr txt
+    Left txt  -> liftIO $ TIO.putStr txt
     Right val -> pure val
 
 assertTrue :: Bool -> Handler ()
-assertTrue True = pure ()
+assertTrue True  = pure ()
 assertTrue False = throwError ""
 
 assertJust :: Maybe a -> Handler a
-assertJust Nothing = throwError ""
+assertJust Nothing  = throwError ""
 assertJust (Just x) = pure x
 
 getApp :: Handler App

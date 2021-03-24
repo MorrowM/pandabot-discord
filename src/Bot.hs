@@ -1,55 +1,47 @@
-module Bot 
+module Bot
 ( onStart
 , eventHandler
 ) where
 
-import Control.Concurrent ( forkIO )
-import Control.Monad ( void )
-import Control.Monad.IO.Class ( MonadIO(liftIO) )
-import Data.List ( isPrefixOf )
-import Database.Persist.Sql ( runMigration )
-import Discord ( readCache, Cache(_currentUser) )
-import Discord.Requests
-    ( ChannelRequest(CreateReaction, CreateMessage),
-      GuildRequest(AddGuildMemberRole, GetGuildMember) )
-import Discord.Types
-    ( GuildId,
-      UserId,
-      Message(..),
-      Event(..),
-      GuildMember(memberUser),
-      Role(roleId),
-      User(userName, userId) )
-import Options.Applicative
-    ( defaultPrefs,
-      execParserPure,
-      ParserHelp(helpUsage),
-      ParserFailure(execFailure),
-      ParserResult(Failure, Success) )
-import Options.Applicative.Help.Chunk ( Chunk(unChunk) )
-import qualified Data.Text as T
-import System.Exit ( ExitCode(ExitSuccess) )
+import           Control.Concurrent             (forkIO)
+import           Control.Monad                  (void)
+import           Control.Monad.IO.Class         (MonadIO (liftIO))
+import           Data.List                      (isPrefixOf)
+import qualified Data.Text                      as T
+import           Database.Persist.Sql           (runMigration)
+import           Discord                        (Cache (_currentUser),
+                                                 readCache)
+import           Discord.Requests               (ChannelRequest (CreateMessage, CreateReaction),
+                                                 GuildRequest (AddGuildMemberRole, GetGuildMember))
+import           Discord.Types                  (Event (..), GuildId,
+                                                 GuildMember (memberUser),
+                                                 Message (..), Role (roleId),
+                                                 User (userId, userName),
+                                                 UserId)
+import           Options.Applicative            (ParserFailure (execFailure),
+                                                 ParserHelp (helpUsage),
+                                                 ParserResult (Failure, Success),
+                                                 defaultPrefs, execParserPure)
+import           Options.Applicative.Help.Chunk (Chunk (unChunk))
+import           System.Exit                    (ExitCode (ExitSuccess))
 
-import Buttons
-    ( runButtonComm,
-      buttonHandler,
-      ButtonCommError(ChannelIdNameError, RoleIdNameError) )
-import Commands ( rootComm, Comm(..) )
-import Config (reactPositiveEmoji, welcomeRole)
-import NotifPoints ( runNotifPointsComm, runLeaderboardComm, handlePointAssign, handlePointRemove )
-import Schema ( migrateAll )
-import Snappers ( checkForSnapshots )
-import Types
-    ( assertTrue,
-      catchErr,
-      exec,
-      run,
-      runDB,
-      Handler,
-      NameError(NameAmbiguous, NameNotFound),
-      getConfig,
-      getDis )
-import Util ( wordsWithQuotes, inGuild, isAdmin, logS )
+import           Buttons                        (ButtonCommError (ChannelIdNameError, RoleIdNameError),
+                                                 buttonHandler, runButtonComm)
+import           Commands                       (Comm (..), rootComm)
+import           Config                         (reactPositiveEmoji,
+                                                 welcomeRole)
+import           NotifPoints                    (handlePointAssign,
+                                                 handlePointRemove,
+                                                 runLeaderboardComm,
+                                                 runNotifPointsComm)
+import           Schema                         (migrateAll)
+import           Snappers                       (checkForSnapshots)
+import           Types                          (Handler,
+                                                 NameError (NameAmbiguous, NameNotFound),
+                                                 assertTrue, catchErr, exec,
+                                                 getConfig, getDis, run, runDB)
+import           Util                           (inGuild, isAdmin, logS,
+                                                 wordsWithQuotes)
 
 onStart :: Handler ()
 onStart = catchErr $ do
@@ -97,7 +89,7 @@ runComm args msg = catchErr $ do
     usrIsAdmin <- isAdmin gid mem
     case execParserPure defaultPrefs (rootComm usrIsAdmin) args of
       Success whichComm -> case whichComm of
-        ButtonComm comm -> 
+        ButtonComm comm ->
           if usrIsAdmin then do
             res <- runButtonComm comm gid
             case res of
@@ -127,11 +119,11 @@ runComm args msg = catchErr $ do
             Left _ -> do
               reactNegative
               reply "Sorry, an unknown error has occured while handling your request"
-            
+
       Failure f -> do
         let (hlp, status, _) = execFailure f ""
             helpStr = "```" ++ show hlp ++ "```"
-        assertTrue $ 
+        assertTrue $
           not ("Usage:  COMMAND\n" `isPrefixOf` maybe "" show (unChunk $ helpUsage hlp))
           || status == ExitSuccess
 

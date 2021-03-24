@@ -1,14 +1,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Instances () where
 
-import Database.Persist.Sql
-    ( PersistField(..),
-      PersistFieldSql(..),
-      SqlType(SqlInt64),
-      PersistValue(PersistInt64) )
-import Discord.Types ( Snowflake )
+import           Database.Persist.Sql (PersistField (..), PersistFieldSql (..),
+                                       PersistValue (PersistInt64),
+                                       SqlType (SqlInt64))
+import           Discord.Types        (Snowflake)
 
-import Util ( tshow )
+import           Util                 (tshow)
 
 
 instance PersistField Snowflake where

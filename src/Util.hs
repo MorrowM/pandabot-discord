@@ -1,4 +1,4 @@
-module Util 
+module Util
   ( wordsWithQuotes
   , myUserId
   , stripEmoji
@@ -10,36 +10,32 @@ module Util
   , isAdmin
   ) where
 
-import Control.Monad.IO.Class ( MonadIO(..) )
-import Data.Bits ( Bits((.&.)) )
-import Data.Char ( isAscii )
-import Data.Maybe ( catMaybes )
-import Data.Text (Text)
-import Data.Time ( defaultTimeLocale, getCurrentTime, formatTime )
-import Discord ( readCache, Cache(_currentUser) )
-import Discord.Requests
-    ( GuildRequest(GetGuildRoles, GetGuildChannels) )
-import Discord.Types
-    ( ChannelId,
-      GuildId,
-      RoleId,
-      Snowflake,
-      UserId,
-      Channel(ChannelText, channelName, channelId),
-      GuildMember(memberRoles),
-      Role(roleName, rolePerms, roleId),
-      User(userId) )
-import qualified Data.Text as T
-import Text.Read ( readMaybe )
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Data.Bits              (Bits ((.&.)))
+import           Data.Char              (isAscii)
+import           Data.Maybe             (catMaybes)
+import           Data.Text              (Text)
+import qualified Data.Text              as T
+import           Data.Time              (defaultTimeLocale, formatTime,
+                                         getCurrentTime)
+import           Discord                (Cache (_currentUser), readCache)
+import           Discord.Requests       (GuildRequest (GetGuildChannels, GetGuildRoles))
+import           Discord.Types          (Channel (ChannelText, channelId, channelName),
+                                         ChannelId, GuildId,
+                                         GuildMember (memberRoles),
+                                         Role (roleId, roleName, rolePerms),
+                                         RoleId, Snowflake, User (userId),
+                                         UserId)
+import           Text.Read              (readMaybe)
 
-import Types ( run, Handler, NameError(..), getDis )
+import           Types                  (Handler, NameError (..), getDis, run)
 
 wordsWithQuotes :: Text -> [Text]
 wordsWithQuotes = concat . wordsEveryOther . T.splitOn "\""
   where
     wordsEveryOther :: [Text] -> [[Text]]
-    wordsEveryOther [] = []
-    wordsEveryOther [z] = [T.words z]
+    wordsEveryOther []           = []
+    wordsEveryOther [z]          = [T.words z]
     wordsEveryOther (x : y : xs) = T.words x : [y] : wordsEveryOther xs
 
 myUserId :: Handler UserId
@@ -66,15 +62,15 @@ tryGetChannelByName gid name = do
   mchans <- run $ GetGuildChannels gid
   let chans = catMaybes $ isText <$> mchans
   pure $ tryGetIdByName chans fst snd name
-  where 
+  where
     isText chan = case chan of
       ChannelText {} -> Just (channelName chan, channelId chan)
-      _ -> Nothing
+      _              -> Nothing
 
 tryGetIdByName :: [a] -> ( a -> Text) -> (a -> Snowflake) -> Text -> Either (NameError a) Snowflake
 tryGetIdByName vals toText toId name = case filter ((==name) . toText) vals of
   [] -> case readMaybe (T.unpack name) :: Maybe Snowflake of
-    Nothing -> Left NameNotFound
+    Nothing    -> Left NameNotFound
     Just flake -> Right flake
   [x] -> Right $ toId x
   xs -> Left (NameAmbiguous xs)

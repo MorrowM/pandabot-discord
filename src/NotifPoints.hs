@@ -1,4 +1,4 @@
-module NotifPoints 
+module NotifPoints
   ( runNotifPointsComm
   , runLeaderboardComm
   , handlePointAssign
@@ -6,24 +6,29 @@ module NotifPoints
   , NotifPointsCommError
   ) where
 
-import Control.Monad ( when )
-import Control.Monad.IO.Class ( liftIO )
-import Data.List ( group, sortOn )
-import Data.Ord ( Down(..) )
-import Data.Text ( Text, unpack )
-import qualified Data.Text as T
-import Data.Time ( getCurrentTime )
-import Data.Traversable ( for )
-import Database.Persist.Sql ( (==.), PersistQueryRead(count), insert, deleteWhere, SelectOpt(..), selectList, entityVal )
-import Discord.Requests ( GuildRequest(..), ChannelRequest(..) )
-import Discord.Types ( GuildId, User(userId, userName), ReactionInfo (..), Emoji(..), Message(..), GuildMember(..) )
+import           Control.Monad          (when)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.List              (group, sortOn)
+import           Data.Ord               (Down (..))
+import           Data.Text              (Text, unpack)
+import qualified Data.Text              as T
+import           Data.Time              (getCurrentTime)
+import           Data.Traversable       (for)
+import           Database.Persist.Sql   (PersistQueryRead (count),
+                                         SelectOpt (..), deleteWhere, entityVal,
+                                         insert, selectList, (==.))
+import           Discord.Requests       (ChannelRequest (..), GuildRequest (..))
+import           Discord.Types          (Emoji (..), GuildId, GuildMember (..),
+                                         Message (..), ReactionInfo (..),
+                                         User (userId, userName))
 
-import Commands ( NotifPointsComm(..), LeaderboardComm(..) )
-import Config ( Config(..) )
-import Schema
-    ( EntityField(..), NotifPoint(..) )
-import Types ( runDB, execDB, Handler, run, exec, catchErr, assertJust, getConfig )
-import Util ( tshow, isAdmin, logS )
+import           Commands               (LeaderboardComm (..),
+                                         NotifPointsComm (..))
+import           Config                 (Config (..))
+import           Schema                 (EntityField (..), NotifPoint (..))
+import           Types                  (Handler, assertJust, catchErr, exec,
+                                         execDB, getConfig, run, runDB)
+import           Util                   (isAdmin, logS, tshow)
 
 runNotifPointsComm :: NotifPointsComm -> GuildId -> User -> (Text -> Handler ()) -> Handler (Either NotifPointsCommError ())
 runNotifPointsComm comm gid usr reply = do
@@ -48,7 +53,7 @@ handlePointAssign rinfo = catchErr $ do
     time <- liftIO getCurrentTime
     execDB $ insert (NotifPoint (reactionMessageId rinfo) gid (reactionUserId rinfo) (userId $ messageAuthor msg) time)
     points <- runDB $ count [NotifPointAssignedTo ==. userId (messageAuthor msg), NotifPointGuild ==. gid]
-    exec $ CreateMessage (messageChannel msg) $ "<@" <> tshow (userId $ messageAuthor msg) 
+    exec $ CreateMessage (messageChannel msg) $ "<@" <> tshow (userId $ messageAuthor msg)
       <> "> has been awarded a point for notifying the #NotifGang!\nThey now have " <> showPoints points  <> " total."
     logS $ "Awarded one point to " <> unpack (userName $ messageAuthor msg) <> " for their message " <> show (messageId msg)
 
@@ -71,8 +76,8 @@ runLeaderboardComm _ gid reply = do
       then reply "No one has any points yet!"
       else reply $ T.unlines [tshow i <> ". " <> name <> ": " <> showPoints p | (i, (name, p)) <- zip [(1 :: Int)..] points]
     pure $ Right ()
-    
-    
+
+
 data LeaderboardCommError
 
 showPoints :: Int -> Text

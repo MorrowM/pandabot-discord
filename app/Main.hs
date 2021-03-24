@@ -1,15 +1,13 @@
 module Main where
 
-import Control.Monad.Except (runExceptT)
-import Discord
-    ( runDiscord,
-      def,
-      RunDiscordOpts(discordOnStart, discordToken, discordOnEvent) )
-import qualified Data.Text.IO as TIO
+import           Control.Monad.Except (runExceptT)
+import qualified Data.Text.IO         as TIO
+import           Discord              (RunDiscordOpts (discordOnEvent, discordOnStart, discordToken),
+                                       def, runDiscord)
 
-import Bot ( eventHandler, onStart )
-import Config ( App (..), Config (..) , parseConfigFile)
-import Types ( runHandler )
+import           Bot                  (eventHandler, onStart)
+import           Config               (App (..), Config (..), parseConfigFile)
+import           Types                (runHandler)
 
 main :: IO ()
 main = do
