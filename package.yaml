@@ -24,7 +24,7 @@ dependencies:
 - discord-haskell
 - text
 - time
-- transformers
+- mtl
 - persistent
 - persistent-sqlite
 - persistent-template
@@ -35,6 +35,12 @@ dependencies:
 - aeson
 - lens
 - wreq
+
+default-extensions:
+  - OverloadedStrings
+  - FlexibleContexts
+  - GeneralisedNewtypeDeriving
+  - LambdaCase
 
 library:
   source-dirs: src

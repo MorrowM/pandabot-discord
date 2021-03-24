@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Config
   ( App (..),
     Config (..),
@@ -9,7 +7,7 @@ where
 
 import Control.Monad (join)
 import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Trans.Except (ExceptT, throwE, withExceptT)
+import Control.Monad.Except (ExceptT, throwError, withExceptT, MonadError)
 import Data.ConfigFile (Get_C (get), emptyCP, readfile)
 import Data.Text (Text, pack)
 import Discord (DiscordHandle)
@@ -39,8 +37,8 @@ parseConfigFile file = do
     notifEmoji <- pack <$> get cp "DEFAULT" "notifpoints-emoji"
     rctPositiveEmoji <- pack <$> get cp "DEFAULT" "reactpositive-emoji"
     pure (tok, welcomeRoleTxt, pointsRoleTxt, notifEmoji, rctPositiveEmoji)
-  welcomeRid <- maybe (throwE "invalid welcome-role") pure (readMaybe welcomeRoleTxt)
-  pointsRid <- maybe (throwE "invalid notifpoints-role") pure (readMaybe pointsRoleTxt)
+  welcomeRid <- maybe (throwError "invalid welcome-role") pure (readMaybe welcomeRoleTxt)
+  pointsRid <- maybe (throwError "invalid notifpoints-role") pure (readMaybe pointsRoleTxt)
   pure $
     Config
       { welcomeRole = welcomeRid,

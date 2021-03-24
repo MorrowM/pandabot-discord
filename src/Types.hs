@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+
 module Types 
   ( Handler
   , runHandler
@@ -7,7 +7,6 @@ module Types
   , run
   , exec
   , catchErr
-  , raiseErr
   , assertTrue
   , assertJust
   , getDis
@@ -16,11 +15,10 @@ module Types
   ) where
 
 import Control.Monad ( void )
-import Control.Monad.IO.Class ( MonadIO(liftIO) )
-import Control.Monad.Trans.Class ( MonadTrans(lift) )
-import Control.Monad.Trans.Except
-    ( ExceptT(..), runExceptT, throwE )
-import Control.Monad.Trans.Reader ( ReaderT(runReaderT), ask )
+import Control.Monad.Trans (MonadIO (liftIO), MonadTrans (lift))
+import Control.Monad.Except
+    ( ExceptT(..), runExceptT, throwError, MonadError )
+import Control.Monad.Reader ( ReaderT(runReaderT), ask, MonadReader )
 import Data.Text (Text)
 import Data.Time ( defaultTimeLocale, getCurrentTime, formatTime )
 import Discord ( FromJSON, DiscordHandle, restCall )
@@ -31,11 +29,14 @@ import qualified Data.Text.IO as TIO
 import Config ( App (..), Config (..) )
 import Database ( DatabaseAction, db )
 
-type Handler a = ExceptT Text (ReaderT App IO) a
+newtype Handler a = Handler
+  { getHandler :: ExceptT Text (ReaderT App IO) a
+  }
+  deriving (Functor, Applicative, Monad, MonadError Text, MonadReader App, MonadIO)
 
 runHandler :: App -> Handler () -> IO ()
 runHandler dis h = do
-  eith <- flip runReaderT dis $ runExceptT h
+  eith <- flip runReaderT dis $ runExceptT $ getHandler h
   case eith of
     Left err -> logS err
     Right () -> pure ()
@@ -56,7 +57,7 @@ run r = do
   dis <- getDis
   res <- liftIO $ restCall dis r
   case res of
-    Left err -> throwE . T.pack . show $ err
+    Left err -> throwError . T.pack . show $ err
     Right a -> pure a
 
 exec :: (FromJSON a, Request (r a)) => r a -> Handler ()
@@ -64,25 +65,22 @@ exec = void . run
 
 catchErr :: Handler () -> Handler ()
 catchErr h = do
-  dis <- lift ask
-  eitherVal <- liftIO $ runReaderT (runExceptT h) dis
+  dis <- ask
+  eitherVal <- liftIO $ runReaderT (runExceptT $ getHandler h) dis
   case eitherVal of
     Left txt -> liftIO $ TIO.putStr txt
-    Right val -> return val
-
-raiseErr :: Text -> Handler a
-raiseErr txt = ExceptT $ return $ Left txt
+    Right val -> pure val
 
 assertTrue :: Bool -> Handler ()
-assertTrue True = return ()
-assertTrue False = raiseErr ""
+assertTrue True = pure ()
+assertTrue False = throwError ""
 
 assertJust :: Maybe a -> Handler a
-assertJust Nothing = raiseErr ""
+assertJust Nothing = throwError ""
 assertJust (Just x) = pure x
 
 getApp :: Handler App
-getApp = lift ask
+getApp = ask
 
 getDis :: Handler DiscordHandle
 getDis = appDis <$> getApp

@@ -1,8 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
-import Control.Monad.Trans.Except (runExceptT)
+import Control.Monad.Except (runExceptT)
 import Discord
     ( runDiscord,
       def,
