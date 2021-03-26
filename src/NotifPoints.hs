@@ -26,10 +26,11 @@ import           Commands               (LeaderboardComm (..),
                                          NotifPointsComm (..))
 import           Config                 (Config (..))
 import           Schema                 (EntityField (..), NotifPoint (..))
-import           Types                  (Handler, assertJust, catchErr, exec,
-                                         execDB, getConfig, run, runDB)
+import           Types                  (Handler, assertJust, catchErr, run_,
+                                         getConfig, run, runDB, runDB_)
 import           Util                   (isAdmin, logS, tshow)
 
+-- | Handle invokations of the notifpoints command.
 runNotifPointsComm :: NotifPointsComm -> GuildId -> User -> (Text -> Handler ()) -> Handler (Either NotifPointsCommError ())
 runNotifPointsComm comm gid usr reply = do
   case comm of
@@ -51,16 +52,16 @@ handlePointAssign rinfo = catchErr $ do
   let roleIsPinged = npRole `elem` messageMentionRoles msg
   when (admin && emojiName (reactionEmoji rinfo) == npEmoji && roleIsPinged) $ do
     time <- liftIO getCurrentTime
-    execDB $ insert (NotifPoint (reactionMessageId rinfo) gid (reactionUserId rinfo) (userId $ messageAuthor msg) time)
+    runDB_ $ insert (NotifPoint (reactionMessageId rinfo) gid (reactionUserId rinfo) (userId $ messageAuthor msg) time)
     points <- runDB $ count [NotifPointAssignedTo ==. userId (messageAuthor msg), NotifPointGuild ==. gid]
-    exec $ CreateMessage (messageChannel msg) $ "<@" <> tshow (userId $ messageAuthor msg)
+    run_ $ CreateMessage (messageChannel msg) $ "<@" <> tshow (userId $ messageAuthor msg)
       <> "> has been awarded a point for notifying the #NotifGang!\nThey now have " <> showPoints points  <> " total."
     logS $ "Awarded one point to " <> unpack (userName $ messageAuthor msg) <> " for their message " <> show (messageId msg)
 
 handlePointRemove :: ReactionInfo -> Handler ()
 handlePointRemove rinfo = catchErr $ do
   pointEmoji <- pointAssignEmoji <$> getConfig
-  when (pointEmoji == emojiName (reactionEmoji rinfo)) $ execDB $ deleteWhere
+  when (pointEmoji == emojiName (reactionEmoji rinfo)) $ runDB_ $ deleteWhere
     [ NotifPointMessage ==. reactionMessageId rinfo
     , NotifPointAssignedBy ==. reactionUserId rinfo
     ]

@@ -1,4 +1,6 @@
-module Snappers where
+module Snappers
+( checkForSnapshots
+) where
 
 import           Control.Applicative
 import           Control.Concurrent
@@ -34,6 +36,7 @@ getLatest = do
   r <- liftIO $ get manifestUrl
   pure $ r ^. responseBody & decode
 
+-- | Check for new versions of Minecraft, sending out a ping if any changes are detected.
 checkForSnapshots :: DiscordHandle -> IO ()
 checkForSnapshots dis = do
   mlatest <- getLatest

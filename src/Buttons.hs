@@ -27,21 +27,24 @@ import           Discord.Types        (ChannelId, Emoji (emojiName), GuildId,
 import           Commands             (ButtonComm (..))
 import           Schema               (Button (..),
                                        EntityField (ButtonChannel, ButtonEmoji, ButtonMessage, ButtonRole))
-import           Types                (Handler, NameError, assertTrue, exec,
-                                       execDB, run, runDB)
+import           Types                (Handler, NameError, assertTrue, run_,
+                                       run, runDB, runDB_)
 import           Util                 (inGuild, logS, myUserId, stripEmoji,
                                        tryGetChannelByName, tryGetRoleByName)
 
-
+-- | Assign a role to a given guild member.
 giveRole :: RoleId -> UserId -> GuildId -> Handler ()
 giveRole role user gid = run $ AddGuildMemberRole gid user role
 
+-- | Revoke a role from a given guild member.
 removeRole :: RoleId -> UserId -> GuildId -> Handler ()
 removeRole role user gid = run $ RemoveGuildMemberRole gid user role
 
+-- | Retrieve a list of the active buttons.
 buttons :: Handler [Button]
 buttons = fmap (map entityVal) $ runDB $ selectList [] []
 
+-- | Handle a button press.
 buttonHandler :: ReactionInfo -> Handler ()
 buttonHandler rinfo = do
   myUid <- myUserId
@@ -62,28 +65,29 @@ buttonHandler rinfo = do
         run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bemoji
         logS $ "User " <> show (reactionUserId rinfo) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
 
+-- | Handle invokations of the button command.
 runButtonComm :: ButtonComm -> GuildId -> Handler (Either ButtonCommError ())
 runButtonComm btn gid = case btn of
   AddButton chanName emoji rName txt -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
       msg <- run $ CreateMessage chan txt
-      execDB $ insert $ Button chan (messageId msg) emoji rid
+      runDB_ $ insert $ Button chan (messageId msg) emoji rid
       logS $ "Created button in channel " <> show chan <> " on message " <> show (messageId msg) <> " with emoji " <> show emoji <> " for role " <> show rid
-      exec $ CreateReaction (chan, messageId msg) emoji
+      run_ $ CreateReaction (chan, messageId msg) emoji
 
   InsertButton chanName emoji rName mid -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
-      execDB $ insert $ Button chan mid emoji rid
+      runDB_ $ insert $ Button chan mid emoji rid
       logS $ "Inserted button in channel " <> show chan <> " on message " <> show mid <> " with emoji " <> show emoji <> " for role " <> show rid
-      exec $ CreateReaction (chan, mid) emoji
+      run_ $ CreateReaction (chan, mid) emoji
 
   RemoveButton chanName emoji rName mid -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
-      execDB $ deleteWhere [ButtonChannel ==. chan, ButtonMessage ==. mid, ButtonEmoji ==. emoji, ButtonRole ==. rid]
+      runDB_ $ deleteWhere [ButtonChannel ==. chan, ButtonMessage ==. mid, ButtonEmoji ==. emoji, ButtonRole ==. rid]
       remainingRoles <- runDB $ selectFirst [ButtonChannel ==. chan, ButtonMessage ==. mid, ButtonEmoji ==. emoji] []
-      when (isNothing remainingRoles) $ exec $ DeleteOwnReaction (chan, mid) emoji
+      when (isNothing remainingRoles) $ run_ $ DeleteOwnReaction (chan, mid) emoji
 
-
+-- | Errors that can occur while running a button command.
 data ButtonCommError
   = RoleIdNameError (NameError Role)
   | ChannelIdNameError (NameError (Text, ChannelId))

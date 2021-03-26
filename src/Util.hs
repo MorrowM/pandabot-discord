@@ -30,6 +30,7 @@ import           Text.Read              (readMaybe)
 
 import           Types                  (Handler, NameError (..), getDis, run)
 
+-- | Split a string into words, taking quotes clauses into account.
 wordsWithQuotes :: Text -> [Text]
 wordsWithQuotes = concat . wordsEveryOther . T.splitOn "\""
   where
@@ -38,25 +39,30 @@ wordsWithQuotes = concat . wordsEveryOther . T.splitOn "\""
     wordsEveryOther [z]          = [T.words z]
     wordsEveryOther (x : y : xs) = T.words x : [y] : wordsEveryOther xs
 
+-- | Retrieve the bot's own user id.
 myUserId :: Handler UserId
 myUserId = do
   dis <- getDis
   cache <- liftIO $ readCache dis
   pure $ userId $ _currentUser cache
 
+-- | Strip an emoji into just its name.
 stripEmoji :: Text -> Text
 stripEmoji emoji = if T.all isAscii emoji
   then T.takeWhile (/= ':') . T.drop 2 $ emoji
   else emoji
 
+-- | Run a given continuation with a given guild, if it exists.
 inGuild :: Maybe GuildId -> (GuildId -> Handler ()) -> Handler ()
 inGuild = flip $ maybe (pure ())
 
+-- | Look up a role id by its name.
 tryGetRoleByName :: GuildId -> Text -> Handler (Either (NameError Role) RoleId)
 tryGetRoleByName gid name = do
   roles <- run $ GetGuildRoles gid
   pure $ tryGetIdByName roles roleName roleId name
 
+-- | Look up a channel id by its name.
 tryGetChannelByName :: GuildId -> Text -> Handler (Either (NameError (Text, ChannelId)) ChannelId)
 tryGetChannelByName gid name = do
   mchans <- run $ GetGuildChannels gid
@@ -75,6 +81,7 @@ tryGetIdByName vals toText toId name = case filter ((==name) . toText) vals of
   [x] -> Right $ toId x
   xs -> Left (NameAmbiguous xs)
 
+-- | Check whether a given member has admin permissions.
 isAdmin :: GuildId -> GuildMember -> Handler Bool
 isAdmin gid mem = do
   roles <- run $ GetGuildRoles gid
@@ -83,9 +90,11 @@ isAdmin gid mem = do
     isSet b n = (b .&. n) == b
     isAdminRole = isSet 8 . rolePerms
 
+-- | Like @show@, but returns @Text@ instead.
 tshow :: Show a => a -> Text
 tshow = T.pack . show
 
+-- | Log a string with a timestamp.
 logS :: MonadIO m => String -> m ()
 logS s = liftIO $ do
   t <- getCurrentTime

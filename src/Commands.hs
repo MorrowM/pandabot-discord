@@ -13,11 +13,13 @@ import           Options.Applicative (Parser, ParserInfo, argument, auto,
                                       hsubparser, info, metavar, progDesc, str,
                                       (<**>))
 
+-- | The overall command tree.
 data Comm
   = ButtonComm ButtonComm
   | NotifPointsComm NotifPointsComm
   | LeaderboardComm LeaderboardComm
 
+-- | The root command parser. Pass @True@ if the invoking user has admin perms.
 rootComm :: Bool -> ParserInfo Comm
 rootComm admin =
   info
@@ -35,6 +37,7 @@ rootSubComm admin =
    <> command "leaderboard" (info (LeaderboardComm <$> leaderboardSubComm) (progDesc "Who has the most points?"))
     )
 
+-- | The button command tree.
 data ButtonComm
   = AddButton Text Text Text Text
   | InsertButton Text Text Text MessageId
@@ -72,11 +75,13 @@ removeOptions =
     <*> argument str (metavar "ROLE")
     <*> argument auto (metavar "MESSAGE_ID")
 
+-- | The notifpoints command tree,
 data NotifPointsComm = ViewSelf
 
 notifPointsSubComm :: Parser NotifPointsComm
 notifPointsSubComm = pure ViewSelf
 
+-- | The leaderboard command tree.
 data LeaderboardComm = ViewLeaderboard
 
 leaderboardSubComm :: Parser LeaderboardComm

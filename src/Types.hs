@@ -3,9 +3,9 @@ module Types
   ( Handler
   , runHandler
   , runDB
-  , execDB
+  , runDB_
   , run
-  , exec
+  , run_
   , catchErr
   , assertTrue
   , assertJust
@@ -18,7 +18,7 @@ import           Control.Monad                 (void)
 import           Control.Monad.Except          (ExceptT (..), MonadError,
                                                 runExceptT, throwError)
 import           Control.Monad.Reader          (MonadReader,
-                                                ReaderT (runReaderT), ask)
+                                                ReaderT (runReaderT), ask, asks)
 import           Control.Monad.Trans           (MonadIO (liftIO),
                                                 MonadTrans (lift))
 import           Data.Text                     (Text)
@@ -33,11 +33,13 @@ import           Discord.Internal.Rest.Prelude (Request)
 import           Config                        (App (..), Config (..))
 import           Database                      (DatabaseAction, db)
 
+-- | The main monad stack for the application.
 newtype Handler a = Handler
   { getHandler :: ExceptT Text (ReaderT App IO) a
   }
   deriving (Functor, Applicative, Monad, MonadError Text, MonadReader App, MonadIO)
 
+-- | Escape from the @Handler@ monad into the @IO@ monad.
 runHandler :: App -> Handler () -> IO ()
 runHandler dis h = do
   eith <- flip runReaderT dis $ runExceptT $ getHandler h
@@ -50,12 +52,15 @@ runHandler dis h = do
       let fmt = T.pack $ formatTime defaultTimeLocale "[%F %T] " t
       TIO.putStrLn $ fmt <> s
 
+-- | Run a database action in the @Handler@ monad.
 runDB :: DatabaseAction a -> Handler a
 runDB = liftIO . db
 
-execDB :: DatabaseAction a -> Handler ()
-execDB = void . runDB
+-- | Like @runDB@, discarding the result.
+runDB_ :: DatabaseAction a -> Handler ()
+runDB_ = void . runDB
 
+-- | Run a Discord API request in the @Handler@ monad.
 run :: (FromJSON a, Request (r a)) => r a -> Handler a
 run r = do
   dis <- getDis
@@ -64,9 +69,11 @@ run r = do
     Left err -> throwError . T.pack . show $ err
     Right a  -> pure a
 
-exec :: (FromJSON a, Request (r a)) => r a -> Handler ()
-exec = void . run
+-- | Like @run@, discarding the result.
+run_ :: (FromJSON a, Request (r a)) => r a -> Handler ()
+run_ = void . run
 
+-- | Catch any errors, printing them to the console.
 catchErr :: Handler () -> Handler ()
 catchErr h = do
   dis <- ask
@@ -75,21 +82,24 @@ catchErr h = do
     Left txt  -> liftIO $ TIO.putStr txt
     Right val -> pure val
 
+-- | Throw an error given a @Bool@.
 assertTrue :: Bool -> Handler ()
 assertTrue True  = pure ()
 assertTrue False = throwError ""
 
+-- | Extract a result from a @Maybe@, throwing an error if the input is @Nothing@.
 assertJust :: Maybe a -> Handler a
 assertJust Nothing  = throwError ""
 assertJust (Just x) = pure x
 
-getApp :: Handler App
-getApp = ask
-
+-- | Retrieve the @DiscordHandle@ from the application context.
 getDis :: Handler DiscordHandle
-getDis = appDis <$> getApp
+getDis = asks appDis
 
+-- | Retrieve the @Config@ from the application context.
 getConfig :: Handler Config
-getConfig = appConfig <$> getApp
+getConfig = asks appConfig
 
+-- | Represents a lookup error, where the lookup expects exactly one result
+-- but none or multiple are found.
 data NameError a = NameNotFound | NameAmbiguous [a]

@@ -38,11 +38,12 @@ import           Schema                         (migrateAll)
 import           Snappers                       (checkForSnapshots)
 import           Types                          (Handler,
                                                  NameError (NameAmbiguous, NameNotFound),
-                                                 assertTrue, catchErr, exec,
+                                                 assertTrue, catchErr, run_,
                                                  getConfig, getDis, run, runDB)
 import           Util                           (inGuild, isAdmin, logS,
                                                  wordsWithQuotes)
 
+-- | Initialize the bot.
 onStart :: Handler ()
 onStart = catchErr $ do
   runDB $ runMigration migrateAll
@@ -51,6 +52,7 @@ onStart = catchErr $ do
   liftIO $ putStrLn $ "Connected as " <> show (userName $ _currentUser cache)
   liftIO . void . forkIO $ checkForSnapshots dis
 
+-- | Handle Discord gateway events.
 eventHandler :: Event -> Handler ()
 eventHandler event = case event of
   GuildMemberAdd gid mem -> do
@@ -134,7 +136,7 @@ runComm args msg = catchErr $ do
         reply $ T.pack helpStr
       _ -> pure ()
   where
-    reply = exec . CreateMessage (messageChannel msg)
+    reply = run_ . CreateMessage (messageChannel msg)
     reactPositive = do
       emo <- reactPositiveEmoji <$> getConfig
       liftIO $ print emo

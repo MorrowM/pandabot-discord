@@ -15,11 +15,13 @@ import           Discord                (DiscordHandle)
 import           Discord.Types          (Emoji, RoleId)
 import           Text.Read              (readMaybe)
 
+-- | The application environment.
 data App = App
   { appDis    :: DiscordHandle,
     appConfig :: Config
   }
 
+-- | The application configuration
 data Config = Config
   { botToken           :: Text,
     welcomeRole        :: RoleId,
@@ -28,6 +30,7 @@ data Config = Config
     reactPositiveEmoji :: Text
   }
 
+-- | Parse the configration file into a program configuration.
 parseConfigFile :: FilePath -> ExceptT Text IO Config
 parseConfigFile file = do
   (tok, welcomeRoleTxt, pointsRoleTxt, notifEmoji, rctPositiveEmoji) <- withExceptT (pack . show . fst) $ do
