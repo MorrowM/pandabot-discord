@@ -21,19 +21,20 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- aeson
+- conduit
+- ConfigFile
 - discord-haskell
-- text
-- time
+- lens
+- monad-logger
 - mtl
+- optparse-applicative
 - persistent
 - persistent-sqlite
 - persistent-template
-- monad-logger
-- conduit
-- optparse-applicative
-- ConfigFile
-- aeson
-- lens
+- text
+- time
+- transformers
 - wreq
 
 default-extensions:
@@ -41,6 +42,10 @@ default-extensions:
   - FlexibleContexts
   - GeneralisedNewtypeDeriving
   - LambdaCase
+  - FlexibleInstances
+
+ghc-options:
+  - -Wall
 
 library:
   source-dirs: src
@@ -53,7 +58,6 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-    - -Wall
     - -O2
     dependencies:
     - pandabot-discord

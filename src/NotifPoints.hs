@@ -26,8 +26,8 @@ import           Commands               (LeaderboardComm (..),
                                          NotifPointsComm (..))
 import           Config                 (Config (..))
 import           Schema                 (EntityField (..), NotifPoint (..))
-import           Types                  (Handler, assertJust, catchErr, run_,
-                                         getConfig, run, runDB, runDB_)
+import           Types                  (Handler, assertJust, catchErr,
+                                         getConfig, run, runDB, runDB_, run_)
 import           Util                   (isAdmin, logS, tshow)
 
 -- | Handle invokations of the notifpoints command.
@@ -48,9 +48,7 @@ handlePointAssign rinfo = catchErr $ do
   admin <- isAdmin gid mem
   npEmoji <- pointAssignEmoji <$> getConfig
   msg <- run $ GetChannelMessage (reactionChannelId rinfo, reactionMessageId rinfo)
-  npRole <- pointsRole <$> getConfig
-  let roleIsPinged = npRole `elem` messageMentionRoles msg
-  when (admin && emojiName (reactionEmoji rinfo) == npEmoji && roleIsPinged) $ do
+  when (admin && emojiName (reactionEmoji rinfo) == npEmoji) $ do
     time <- liftIO getCurrentTime
     runDB_ $ insert (NotifPoint (reactionMessageId rinfo) gid (reactionUserId rinfo) (userId $ messageAuthor msg) time)
     points <- runDB $ count [NotifPointAssignedTo ==. userId (messageAuthor msg), NotifPointGuild ==. gid]

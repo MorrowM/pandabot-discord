@@ -7,37 +7,40 @@ module Buttons
   , ButtonCommError (..)
   ) where
 
-import           Control.Monad        (when)
-import           Data.Foldable        (for_)
-import           Data.Maybe           (isNothing)
-import           Data.Text            (Text)
-import           Database.Persist.Sql (Entity (entityVal),
-                                       PersistQueryRead (selectFirst),
-                                       PersistQueryWrite (deleteWhere),
-                                       PersistStoreWrite (insert), selectList,
-                                       (==.))
-import           Discord.Requests     (ChannelRequest (CreateMessage, CreateReaction, DeleteOwnReaction, DeleteUserReaction),
-                                       GuildRequest (AddGuildMemberRole, GetGuildMember, RemoveGuildMemberRole))
-import           Discord.Types        (ChannelId, Emoji (emojiName), GuildId,
-                                       GuildMember (memberRoles),
-                                       Message (messageId),
-                                       ReactionInfo (reactionEmoji, reactionGuildId, reactionMessageId, reactionUserId),
-                                       Role, RoleId, UserId)
+import           Control.Monad             (guard, void, when)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Maybe (MaybeT (..))
+import           Data.Foldable             (for_)
+import           Data.Maybe                (isNothing)
+import           Data.Text                 (Text)
+import           Database.Persist.Sql      (Entity (entityVal),
+                                            PersistQueryRead (selectFirst),
+                                            PersistQueryWrite (deleteWhere),
+                                            PersistStoreWrite (insert),
+                                            selectList, (==.))
+import           Discord.Requests          (ChannelRequest (CreateMessage, CreateReaction, DeleteOwnReaction, DeleteUserReaction),
+                                            GuildRequest (AddGuildMemberRole, GetGuildMember, RemoveGuildMemberRole))
+import           Discord.Types             (ChannelId, Emoji (emojiName),
+                                            GuildId, GuildMember (memberRoles),
+                                            Message (messageId),
+                                            ReactionInfo (reactionEmoji, reactionGuildId, reactionMessageId, reactionUserId),
+                                            Role, RoleId, UserId)
 
-import           Commands             (ButtonComm (..))
-import           Schema               (Button (..),
-                                       EntityField (ButtonChannel, ButtonEmoji, ButtonMessage, ButtonRole))
-import           Types                (Handler, NameError, assertTrue, run_,
-                                       run, runDB, runDB_)
-import           Util                 (inGuild, logS, myUserId, stripEmoji,
-                                       tryGetChannelByName, tryGetRoleByName)
+import           Commands                  (ButtonComm (..))
+import           Schema                    (Button (..),
+                                            EntityField (ButtonChannel, ButtonEmoji, ButtonMessage, ButtonRole))
+import           Types                     (Handler, MonadDiscord (..),
+                                            NameError, runDB, runDB_)
+import           Util                      (logS, myUserId, stripEmoji,
+                                            tryGetChannelByName,
+                                            tryGetRoleByName)
 
 -- | Assign a role to a given guild member.
-giveRole :: RoleId -> UserId -> GuildId -> Handler ()
+giveRole :: MonadDiscord m => RoleId -> UserId -> GuildId -> m ()
 giveRole role user gid = run $ AddGuildMemberRole gid user role
 
 -- | Revoke a role from a given guild member.
-removeRole :: RoleId -> UserId -> GuildId -> Handler ()
+removeRole :: MonadDiscord m => RoleId -> UserId -> GuildId -> m ()
 removeRole role user gid = run $ RemoveGuildMemberRole gid user role
 
 -- | Retrieve a list of the active buttons.
@@ -46,24 +49,24 @@ buttons = fmap (map entityVal) $ runDB $ selectList [] []
 
 -- | Handle a button press.
 buttonHandler :: ReactionInfo -> Handler ()
-buttonHandler rinfo = do
+buttonHandler rinfo = void . runMaybeT $ do
   myUid <- myUserId
-  assertTrue $ myUid /= reactionUserId rinfo
-  inGuild (reactionGuildId rinfo) $ \gid -> do
-    logS $ "User " <> show (reactionUserId rinfo) <> " reacted with " <> show (emojiName $ reactionEmoji rinfo) <> " on message " <> show (reactionMessageId rinfo)
-    mem <- run $ GetGuildMember gid (reactionUserId rinfo)
-    btns <- buttons
-    for_ btns $ \button -> do
-      let bmsg = buttonMessage button
-          bemoji = buttonEmoji button
-          bchannel = buttonChannel button
-          brole = buttonRole button
-      when (bmsg == reactionMessageId rinfo && emojiName (reactionEmoji rinfo) == stripEmoji bemoji) $ do
-        if brole `elem` memberRoles mem
-          then removeRole brole (reactionUserId rinfo) gid
-          else giveRole brole (reactionUserId rinfo) gid
-        run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bemoji
-        logS $ "User " <> show (reactionUserId rinfo) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
+  guard $ myUid /= reactionUserId rinfo
+  gid <- MaybeT . pure $ reactionGuildId rinfo
+  logS $ "User " <> show (reactionUserId rinfo) <> " reacted with " <> show (emojiName $ reactionEmoji rinfo) <> " on message " <> show (reactionMessageId rinfo)
+  mem <- run $ GetGuildMember gid (reactionUserId rinfo)
+  btns <- lift buttons
+  for_ btns $ \button -> do
+    let bmsg = buttonMessage button
+        bemoji = buttonEmoji button
+        bchannel = buttonChannel button
+        brole = buttonRole button
+    when (bmsg == reactionMessageId rinfo && emojiName (reactionEmoji rinfo) == stripEmoji bemoji) $ do
+      if brole `elem` memberRoles mem
+        then removeRole brole (reactionUserId rinfo) gid
+        else giveRole brole (reactionUserId rinfo) gid
+      run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bemoji
+      logS $ "User " <> show (reactionUserId rinfo) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
 
 -- | Handle invokations of the button command.
 runButtonComm :: ButtonComm -> GuildId -> Handler (Either ButtonCommError ())
@@ -92,7 +95,7 @@ data ButtonCommError
   = RoleIdNameError (NameError Role)
   | ChannelIdNameError (NameError (Text, ChannelId))
 
-withRoleAndChannel :: GuildId -> Text -> Text -> (RoleId -> ChannelId -> Handler a) -> Handler (Either ButtonCommError a)
+withRoleAndChannel :: MonadDiscord m => GuildId -> Text -> Text -> (RoleId -> ChannelId -> m a) -> m (Either ButtonCommError a)
 withRoleAndChannel gid rName chanName f = do
   mrid <- tryGetRoleByName gid rName
   case mrid of

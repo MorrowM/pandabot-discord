@@ -4,8 +4,11 @@ module Bot
 ) where
 
 import           Control.Concurrent             (forkIO)
-import           Control.Monad                  (void)
+import           Control.Monad                  (guard, void)
 import           Control.Monad.IO.Class         (MonadIO (liftIO))
+import           Control.Monad.Reader           (MonadReader)
+import           Control.Monad.Trans.Class      (lift)
+import           Control.Monad.Trans.Maybe      (MaybeT (..))
 import           Data.List                      (isPrefixOf)
 import qualified Data.Text                      as T
 import           Database.Persist.Sql           (runMigration)
@@ -28,7 +31,7 @@ import           System.Exit                    (ExitCode (ExitSuccess))
 import           Buttons                        (ButtonCommError (ChannelIdNameError, RoleIdNameError),
                                                  buttonHandler, runButtonComm)
 import           Commands                       (Comm (..), rootComm)
-import           Config                         (reactPositiveEmoji,
+import           Config                         (App, reactPositiveEmoji,
                                                  welcomeRole)
 import           NotifPoints                    (handlePointAssign,
                                                  handlePointRemove,
@@ -36,20 +39,19 @@ import           NotifPoints                    (handlePointAssign,
                                                  runNotifPointsComm)
 import           Schema                         (migrateAll)
 import           Snappers                       (checkForSnapshots)
-import           Types                          (Handler,
+import           Types                          (Handler, MonadDiscord (..),
                                                  NameError (NameAmbiguous, NameNotFound),
-                                                 assertTrue, catchErr, run_,
-                                                 getConfig, getDis, run, runDB)
-import           Util                           (inGuild, isAdmin, logS,
-                                                 wordsWithQuotes)
+                                                 catchErr, getConfig, getDis,
+                                                 runDB)
+import           Util                           (isAdmin, logS, wordsWithQuotes)
 
 -- | Initialize the bot.
 onStart :: Handler ()
 onStart = catchErr $ do
   runDB $ runMigration migrateAll
   dis <- getDis
-  cache <- liftIO $ readCache dis
-  liftIO $ putStrLn $ "Connected as " <> show (userName $ _currentUser cache)
+  logS . ("Connected as " <>)
+    . show . userName . _currentUser =<< liftIO (readCache dis)
   liftIO . void . forkIO $ checkForSnapshots dis
 
 -- | Handle Discord gateway events.
@@ -85,58 +87,61 @@ handleComm msg =
           else pure ()
 
 runComm :: [String] -> Message -> Handler ()
-runComm args msg = catchErr $ do
-  inGuild (messageGuild msg) $ \gid -> do
-    mem <- run $ GetGuildMember gid (userId $ messageAuthor msg)
-    usrIsAdmin <- isAdmin gid mem
-    case execParserPure defaultPrefs (rootComm usrIsAdmin) args of
-      Success whichComm -> case whichComm of
-        ButtonComm comm ->
-          if usrIsAdmin then do
-            res <- runButtonComm comm gid
-            case res of
-              Right () -> reactPositive
-              Left err -> do
-                reactNegative
-                case err of
-                  RoleIdNameError NameNotFound -> reply "Sorry, I couldn't find a role with this name."
-                  RoleIdNameError (NameAmbiguous roles) -> reply $ "There are multiple roles with this name: " <> T.pack (show $ roleId <$> roles)
-                  ChannelIdNameError NameNotFound -> reply "Sorry, I couldn't find a channel with this name."
-                  ChannelIdNameError (NameAmbiguous chans) -> reply $ "There are multiple channels with this name: " <> T.pack (show $ snd <$> chans)
-            else do
-              reactNegative
-              reply "You must be an administrator to run this command."
-        NotifPointsComm comm -> do
-          res <- runNotifPointsComm comm gid (messageAuthor msg) reply
+runComm args msg = void . runMaybeT $ do
+  gid <- MaybeT . pure $ messageGuild msg
+  mem <- run $ GetGuildMember gid (userId $ messageAuthor msg)
+  usrIsAdmin <- isAdmin gid mem
+  case execParserPure defaultPrefs (rootComm usrIsAdmin) args of
+    Success whichComm -> case whichComm of
+      ButtonComm comm ->
+        if usrIsAdmin then do
+          res <- lift $ runButtonComm comm gid
           case res of
             Right () -> reactPositive
-            Left _ -> do
+            Left err -> do
               reactNegative
-              reply "Sorry, an unknown error has occured while handling your request"
+              case err of
+                RoleIdNameError NameNotFound -> reply "Sorry, I couldn't find a role with this name."
+                RoleIdNameError (NameAmbiguous roles) -> reply $ "There are multiple roles with this name: " <> T.pack (show $ roleId <$> roles)
+                ChannelIdNameError NameNotFound -> reply "Sorry, I couldn't find a channel with this name."
+                ChannelIdNameError (NameAmbiguous chans) -> reply $ "There are multiple channels with this name: " <> T.pack (show $ snd <$> chans)
+          else do
+            reactNegative
+            reply "You must be an administrator to run this command."
+      NotifPointsComm comm -> do
+        res <- lift $ runNotifPointsComm comm gid (messageAuthor msg) reply
+        case res of
+          Right () -> reactPositive
+          Left _ -> do
+            reactNegative
+            reply "Sorry, an unknown error has occured while handling your request"
 
-        LeaderboardComm comm -> do
-          res <- runLeaderboardComm comm gid reply
-          case res of
-            Right () -> reactPositive
-            Left _ -> do
-              reactNegative
-              reply "Sorry, an unknown error has occured while handling your request"
+      LeaderboardComm comm -> do
+        res <- lift $ runLeaderboardComm comm gid reply
+        case res of
+          Right () -> reactPositive
+          Left _ -> do
+            reactNegative
+            reply "Sorry, an unknown error has occured while handling your request"
 
-      Failure f -> do
-        let (hlp, status, _) = execFailure f ""
-            helpStr = "```" ++ show hlp ++ "```"
-        assertTrue $
-          not ("Usage:  COMMAND\n" `isPrefixOf` maybe "" show (unChunk $ helpUsage hlp))
-          || status == ExitSuccess
+    Failure f -> do
+      let (hlp, status, _) = execFailure f ""
+          helpStr = "```" ++ show hlp ++ "```"
+      guard $
+        not ("Usage:  COMMAND\n" `isPrefixOf` maybe "" show (unChunk $ helpUsage hlp))
+        || status == ExitSuccess
 
-        if status == ExitSuccess
-          then reactPositive
-          else reactNegative
+      if status == ExitSuccess
+        then reactPositive
+        else reactNegative
 
-        reply $ T.pack helpStr
-      _ -> pure ()
+      reply $ T.pack helpStr
+    _ -> pure ()
   where
+    reply :: MonadDiscord m => T.Text -> m ()
     reply = run_ . CreateMessage (messageChannel msg)
+
+    reactPositive :: (MonadDiscord m, MonadReader App m) => m ()
     reactPositive = do
       emo <- reactPositiveEmoji <$> getConfig
       liftIO $ print emo

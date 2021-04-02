@@ -1,17 +1,15 @@
-
+{-# LANGUAGE UndecidableInstances #-}
 module Types
   ( Handler
   , runHandler
   , runDB
   , runDB_
-  , run
-  , run_
   , catchErr
   , assertTrue
   , assertJust
-  , getDis
   , getConfig
   , NameError (..)
+  , MonadDiscord (..)
   ) where
 
 import           Control.Monad                 (void)
@@ -19,8 +17,8 @@ import           Control.Monad.Except          (ExceptT (..), MonadError,
                                                 runExceptT, throwError)
 import           Control.Monad.Reader          (MonadReader,
                                                 ReaderT (runReaderT), ask, asks)
-import           Control.Monad.Trans           (MonadIO (liftIO),
-                                                MonadTrans (lift))
+import           Control.Monad.Trans           (MonadIO (liftIO), MonadTrans,
+                                                lift)
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
@@ -39,6 +37,37 @@ newtype Handler a = Handler
   }
   deriving (Functor, Applicative, Monad, MonadError Text, MonadReader App, MonadIO)
 
+class (Monad m, MonadIO m, MonadError Text m) => MonadDiscord m where
+  -- | Retrieve the Discord API handle.
+  getDis :: m DiscordHandle
+
+  -- | Run a Discord API request.
+  run :: (FromJSON a, Request (r a)) => r a -> m a
+  run r = do
+    dis <- getDis
+    res <- liftIO $ restCall dis r
+    case res of
+      Left err -> throwError . T.pack . show $ err
+      Right a  -> pure a
+
+  -- | Like @run@, discarding the result.
+  run_ :: (FromJSON a, Request (r a)) => r a -> m ()
+  run_ = void . run
+
+  {-# MINIMAL getDis #-}
+
+instance
+  ( Monad (t m)
+  , MonadIO (t m)
+  , MonadError Text (t m)
+  , MonadTrans t
+  , MonadDiscord m
+  ) => MonadDiscord (t m) where
+  getDis = lift getDis
+
+instance MonadDiscord Handler where
+  getDis = asks appDis
+
 -- | Escape from the @Handler@ monad into the @IO@ monad.
 runHandler :: App -> Handler () -> IO ()
 runHandler dis h = do
@@ -53,25 +82,12 @@ runHandler dis h = do
       TIO.putStrLn $ fmt <> s
 
 -- | Run a database action in the @Handler@ monad.
-runDB :: DatabaseAction a -> Handler a
+runDB :: MonadIO m => DatabaseAction a -> m a
 runDB = liftIO . db
 
 -- | Like @runDB@, discarding the result.
-runDB_ :: DatabaseAction a -> Handler ()
+runDB_ :: MonadIO m => DatabaseAction a -> m ()
 runDB_ = void . runDB
-
--- | Run a Discord API request in the @Handler@ monad.
-run :: (FromJSON a, Request (r a)) => r a -> Handler a
-run r = do
-  dis <- getDis
-  res <- liftIO $ restCall dis r
-  case res of
-    Left err -> throwError . T.pack . show $ err
-    Right a  -> pure a
-
--- | Like @run@, discarding the result.
-run_ :: (FromJSON a, Request (r a)) => r a -> Handler ()
-run_ = void . run
 
 -- | Catch any errors, printing them to the console.
 catchErr :: Handler () -> Handler ()
@@ -92,12 +108,8 @@ assertJust :: Maybe a -> Handler a
 assertJust Nothing  = throwError ""
 assertJust (Just x) = pure x
 
--- | Retrieve the @DiscordHandle@ from the application context.
-getDis :: Handler DiscordHandle
-getDis = asks appDis
-
 -- | Retrieve the @Config@ from the application context.
-getConfig :: Handler Config
+getConfig :: MonadReader App m => m Config
 getConfig = asks appConfig
 
 -- | Represents a lookup error, where the lookup expects exactly one result

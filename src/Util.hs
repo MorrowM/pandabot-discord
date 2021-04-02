@@ -2,7 +2,6 @@ module Util
   ( wordsWithQuotes
   , myUserId
   , stripEmoji
-  , inGuild
   , tryGetRoleByName
   , tryGetChannelByName
   , logS
@@ -28,7 +27,8 @@ import           Discord.Types          (Channel (ChannelText, channelId, channe
                                          UserId)
 import           Text.Read              (readMaybe)
 
-import           Types                  (Handler, NameError (..), getDis, run)
+import           Types                  (MonadDiscord, NameError (..), getDis,
+                                         run)
 
 -- | Split a string into words, taking quotes clauses into account.
 wordsWithQuotes :: Text -> [Text]
@@ -40,7 +40,7 @@ wordsWithQuotes = concat . wordsEveryOther . T.splitOn "\""
     wordsEveryOther (x : y : xs) = T.words x : [y] : wordsEveryOther xs
 
 -- | Retrieve the bot's own user id.
-myUserId :: Handler UserId
+myUserId :: MonadDiscord m => m UserId
 myUserId = do
   dis <- getDis
   cache <- liftIO $ readCache dis
@@ -52,18 +52,14 @@ stripEmoji emoji = if T.all isAscii emoji
   then T.takeWhile (/= ':') . T.drop 2 $ emoji
   else emoji
 
--- | Run a given continuation with a given guild, if it exists.
-inGuild :: Maybe GuildId -> (GuildId -> Handler ()) -> Handler ()
-inGuild = flip $ maybe (pure ())
-
 -- | Look up a role id by its name.
-tryGetRoleByName :: GuildId -> Text -> Handler (Either (NameError Role) RoleId)
+tryGetRoleByName :: MonadDiscord m => GuildId -> Text -> m (Either (NameError Role) RoleId)
 tryGetRoleByName gid name = do
   roles <- run $ GetGuildRoles gid
   pure $ tryGetIdByName roles roleName roleId name
 
 -- | Look up a channel id by its name.
-tryGetChannelByName :: GuildId -> Text -> Handler (Either (NameError (Text, ChannelId)) ChannelId)
+tryGetChannelByName :: MonadDiscord m => GuildId -> Text -> m (Either (NameError (Text, ChannelId)) ChannelId)
 tryGetChannelByName gid name = do
   mchans <- run $ GetGuildChannels gid
   let chans = catMaybes $ isText <$> mchans
@@ -82,7 +78,7 @@ tryGetIdByName vals toText toId name = case filter ((==name) . toText) vals of
   xs -> Left (NameAmbiguous xs)
 
 -- | Check whether a given member has admin permissions.
-isAdmin :: GuildId -> GuildMember -> Handler Bool
+isAdmin :: MonadDiscord m => GuildId -> GuildMember -> m Bool
 isAdmin gid mem = do
   roles <- run $ GetGuildRoles gid
   pure $ any (`elem` memberRoles mem) (roleId <$> filter isAdminRole roles)
