@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 module Config
   ( App (..),
     Config (..),
@@ -5,14 +6,13 @@ module Config
   )
 where
 
-import           Control.Monad          (join)
-import           Control.Monad.Except   (ExceptT, throwError, withExceptT)
-import           Control.Monad.IO.Class (MonadIO (liftIO))
-import           Data.ConfigFile        (Get_C (get), emptyCP, readfile)
-import           Data.Text              (Text, pack)
-import           Discord                (DiscordHandle)
-import           Discord.Types          (RoleId)
-import           Text.Read              (readMaybe)
+import           Control.Monad.Except (ExceptT (..))
+import           Data.Aeson
+import           Data.Bifunctor
+import           Data.Text            (Text, pack)
+import           Discord              (DiscordHandle)
+import           Discord.Types        (RoleId)
+import           GHC.Generics
 
 -- | The application environment.
 data App = App
@@ -26,23 +26,7 @@ data Config = Config
     welcomeRole        :: RoleId,
     pointAssignEmoji   :: Text,
     reactPositiveEmoji :: Text
-  }
+  } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
--- | Parse the configration file into a program configuration.
 parseConfigFile :: FilePath -> ExceptT Text IO Config
-parseConfigFile file = do
-  (tok, welcomeRoleTxt, notifEmoji, rctPositiveEmoji) <- withExceptT (pack . show . fst) $ do
-    cp <- join $ liftIO $ readfile emptyCP file
-    tok <- pack <$> get cp "DEFAULT" "bot-token"
-    welcomeRoleTxt <- get cp "DEFAULT" "welcome-role"
-    notifEmoji <- pack <$> get cp "DEFAULT" "notifpoints-emoji"
-    rctPositiveEmoji <- pack <$> get cp "DEFAULT" "reactpositive-emoji"
-    pure (tok, welcomeRoleTxt, notifEmoji, rctPositiveEmoji)
-  welcomeRid <- maybe (throwError "invalid welcome-role") pure (readMaybe welcomeRoleTxt)
-  pure $
-    Config
-      { welcomeRole = welcomeRid,
-        botToken = tok,
-        pointAssignEmoji = notifEmoji,
-        reactPositiveEmoji = rctPositiveEmoji
-      }
+parseConfigFile path = ExceptT $ first pack <$> eitherDecodeFileStrict path

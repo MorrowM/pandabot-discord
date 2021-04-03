@@ -43,6 +43,7 @@ default-extensions:
   - GeneralisedNewtypeDeriving
   - LambdaCase
   - FlexibleInstances
+  - DeriveGeneric
 
 ghc-options:
   - -Wall

@@ -3,5 +3,6 @@
 database.sqlite
 log.txt
 bot.cfg
+bot.json
 dist-newstyle/
 .vscode/

@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 60ad645ca107bea9c497a20cd2b707d2038baee1026be1154a6de9a8036aafc1
+-- hash: 72bf0c4cebb4efbfb6a754bff0ee44cc2ea044ed2e19fd8b71a493fd785857df
 
 name:           pandabot-discord
-version:        0.1.0.0
+version:        0.1.1
 description:    Please see the README on GitHub at <https://github.com/githubuser/pandabot-discord#readme>
 homepage:       https://github.com/githubuser/pandabot-discord#readme
 bug-reports:    https://github.com/githubuser/pandabot-discord/issues
@@ -42,7 +42,7 @@ library
       Paths_pandabot_discord
   hs-source-dirs:
       src
-  default-extensions: OverloadedStrings FlexibleContexts GeneralisedNewtypeDeriving LambdaCase FlexibleInstances
+  default-extensions: OverloadedStrings FlexibleContexts GeneralisedNewtypeDeriving LambdaCase FlexibleInstances DeriveGeneric
   ghc-options: -Wall
   build-depends:
       ConfigFile
@@ -69,7 +69,7 @@ executable pandabot-discord-exe
       Paths_pandabot_discord
   hs-source-dirs:
       app
-  default-extensions: OverloadedStrings FlexibleContexts GeneralisedNewtypeDeriving LambdaCase FlexibleInstances
+  default-extensions: OverloadedStrings FlexibleContexts GeneralisedNewtypeDeriving LambdaCase FlexibleInstances DeriveGeneric
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       ConfigFile
@@ -98,7 +98,7 @@ test-suite pandabot-discord-test
       Paths_pandabot_discord
   hs-source-dirs:
       test
-  default-extensions: OverloadedStrings FlexibleContexts GeneralisedNewtypeDeriving LambdaCase FlexibleInstances
+  default-extensions: OverloadedStrings FlexibleContexts GeneralisedNewtypeDeriving LambdaCase FlexibleInstances DeriveGeneric
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       ConfigFile
