@@ -1,9 +1,9 @@
-module NotifPoints
-  ( runNotifPointsComm
+module Points
+  ( runPointsComm
   , runLeaderboardComm
   , handlePointAssign
   , handlePointRemove
-  , NotifPointsCommError
+  , PointsCommError
   ) where
 
 import           Control.Monad          (when)
@@ -22,24 +22,23 @@ import           Discord.Types          (Emoji (..), GuildId, GuildMember (..),
                                          Message (..), ReactionInfo (..),
                                          User (userId, userName))
 
-import           Commands               (LeaderboardComm (..),
-                                         NotifPointsComm (..))
+import           Commands               (LeaderboardComm (..), PointsComm (..))
 import           Config                 (Config (..))
-import           Schema                 (EntityField (..), NotifPoint (..))
+import           Schema                 (EntityField (..), Point (..))
 import           Types                  (Handler, assertJust, catchErr,
                                          getConfig, run, runDB, runDB_, run_)
 import           Util                   (isAdmin, logS, tshow)
 
--- | Handle invokations of the notifpoints command.
-runNotifPointsComm :: NotifPointsComm -> GuildId -> User -> (Text -> Handler ()) -> Handler (Either NotifPointsCommError ())
-runNotifPointsComm comm gid usr reply = do
+-- | Handle invokations of the points command.
+runPointsComm :: PointsComm -> GuildId -> User -> (Text -> Handler ()) -> Handler (Either PointsCommError ())
+runPointsComm comm gid usr reply = do
   case comm of
     ViewSelf -> do
-      points <- runDB $ count [NotifPointAssignedTo ==. userId usr, NotifPointGuild ==. gid]
+      points <- runDB $ count [PointAssignedTo ==. userId usr, PointGuild ==. gid]
       reply $ userName usr <> " has " <> showPoints points <> "."
       pure $ Right ()
 
-data NotifPointsCommError
+data PointsCommError
 
 handlePointAssign :: ReactionInfo -> Handler ()
 handlePointAssign rinfo = catchErr $ do
@@ -50,24 +49,24 @@ handlePointAssign rinfo = catchErr $ do
   msg <- run $ GetChannelMessage (reactionChannelId rinfo, reactionMessageId rinfo)
   when (admin && emojiName (reactionEmoji rinfo) == npEmoji) $ do
     time <- liftIO getCurrentTime
-    runDB_ $ insert (NotifPoint (reactionMessageId rinfo) gid (reactionUserId rinfo) (userId $ messageAuthor msg) time)
-    points <- runDB $ count [NotifPointAssignedTo ==. userId (messageAuthor msg), NotifPointGuild ==. gid]
+    runDB_ $ insert (Point (reactionMessageId rinfo) gid (reactionUserId rinfo) (userId $ messageAuthor msg) time)
+    points <- runDB $ count [PointAssignedTo ==. userId (messageAuthor msg), PointGuild ==. gid]
     run_ $ CreateMessage (messageChannel msg) $ "<@" <> tshow (userId $ messageAuthor msg)
-      <> "> has been awarded a point for notifying the #NotifGang!\nThey now have " <> showPoints points  <> " total."
+      <> "> has been awarded a bamboo shoot for being an awesome panda!\nThey now have " <> showPoints points  <> " total."
     logS $ "Awarded one point to " <> unpack (userName $ messageAuthor msg) <> " for their message " <> show (messageId msg)
 
 handlePointRemove :: ReactionInfo -> Handler ()
 handlePointRemove rinfo = catchErr $ do
   pointEmoji <- pointAssignEmoji <$> getConfig
   when (pointEmoji == emojiName (reactionEmoji rinfo)) $ runDB_ $ deleteWhere
-    [ NotifPointMessage ==. reactionMessageId rinfo
-    , NotifPointAssignedBy ==. reactionUserId rinfo
+    [ PointMessage ==. reactionMessageId rinfo
+    , PointAssignedBy ==. reactionUserId rinfo
     ]
 
 runLeaderboardComm :: LeaderboardComm -> GuildId -> (Text -> Handler ()) -> Handler (Either LeaderboardCommError ())
 runLeaderboardComm _ gid reply = do
-    pointsRaw <- runDB $ selectList [NotifPointGuild ==. gid] [Asc NotifPointAssignedTo]
-    let pointsList = take 5 $ sortOn (Down . snd) $ map (\xs -> (head xs, length xs)) . group $ notifPointAssignedTo . entityVal <$> pointsRaw
+    pointsRaw <- runDB $ selectList [PointGuild ==. gid] [Asc PointAssignedTo]
+    let pointsList = take 5 $ sortOn (Down . snd) $ map (\xs -> (head xs, length xs)) . group $ pointAssignedTo . entityVal <$> pointsRaw
     points <- for pointsList $ \(uid, len) -> do
       mem <- run $ GetGuildMember gid uid
       pure (userName $ memberUser mem, len)

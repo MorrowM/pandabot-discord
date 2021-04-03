@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleInstances          #-}
@@ -11,7 +12,6 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE DataKinds                  #-}
 
 module Schema where
 
@@ -32,7 +32,7 @@ share
     role RoleId
     deriving Show
 
-  NotifPoint
+  Point
     message MessageId
     guild GuildId
     assignedBy UserId

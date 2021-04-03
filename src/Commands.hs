@@ -1,7 +1,7 @@
 module Commands
   ( Comm (..)
   , ButtonComm (..)
-  , NotifPointsComm (..)
+  , PointsComm (..)
   , LeaderboardComm (..)
   , rootComm
   ) where
@@ -16,7 +16,7 @@ import           Options.Applicative (Parser, ParserInfo, argument, auto,
 -- | The overall command tree.
 data Comm
   = ButtonComm ButtonComm
-  | NotifPointsComm NotifPointsComm
+  | PointsComm PointsComm
   | LeaderboardComm LeaderboardComm
 
 -- | The root command parser. Pass @True@ if the invoking user has admin perms.
@@ -33,8 +33,8 @@ rootSubComm :: Bool -> Parser Comm
 rootSubComm admin =
   hsubparser
     ( (if admin then command "button" (info (ButtonComm <$> buttonSubComm) (progDesc "Manage role buttons")) else mempty)
-   <> command "points" (info (NotifPointsComm <$> notifPointsSubComm) (progDesc "How many do you have?"))
-   <> command "leaderboard" (info (LeaderboardComm <$> leaderboardSubComm) (progDesc "Who has the most points?"))
+   <> command "shoots" (info (PointsComm <$> pointsSubComm) (progDesc "How many do you have?"))
+   <> command "leaderboard" (info (LeaderboardComm <$> leaderboardSubComm) (progDesc "Who has the most shoots?"))
     )
 
 -- | The button command tree.
@@ -75,11 +75,11 @@ removeOptions =
     <*> argument str (metavar "ROLE")
     <*> argument auto (metavar "MESSAGE_ID")
 
--- | The notifpoints command tree,
-data NotifPointsComm = ViewSelf
+-- | The points command tree,
+data PointsComm = ViewSelf
 
-notifPointsSubComm :: Parser NotifPointsComm
-notifPointsSubComm = pure ViewSelf
+pointsSubComm :: Parser PointsComm
+pointsSubComm = pure ViewSelf
 
 -- | The leaderboard command tree.
 data LeaderboardComm = ViewLeaderboard

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 72bf0c4cebb4efbfb6a754bff0ee44cc2ea044ed2e19fd8b71a493fd785857df
+-- hash: c12ff30c236beecc056f7e0ece858220257869b19a916081064e6d595ca6a046
 
 name:           pandabot-discord
 version:        0.1.1
@@ -33,7 +33,7 @@ library
       Config
       Database
       Instances
-      NotifPoints
+      Points
       Schema
       Snappers
       Types

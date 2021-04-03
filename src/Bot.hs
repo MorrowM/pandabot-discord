@@ -33,10 +33,10 @@ import           Buttons                        (ButtonCommError (ChannelIdNameE
 import           Commands                       (Comm (..), rootComm)
 import           Config                         (App, reactPositiveEmoji,
                                                  welcomeRole)
-import           NotifPoints                    (handlePointAssign,
+import           Points                         (handlePointAssign,
                                                  handlePointRemove,
                                                  runLeaderboardComm,
-                                                 runNotifPointsComm)
+                                                 runPointsComm)
 import           Schema                         (migrateAll)
 import           Snappers                       (checkForSnapshots)
 import           Types                          (Handler, MonadDiscord (..),
@@ -108,8 +108,8 @@ runComm args msg = void . runMaybeT $ do
           else do
             reactNegative
             reply "You must be an administrator to run this command."
-      NotifPointsComm comm -> do
-        res <- lift $ runNotifPointsComm comm gid (messageAuthor msg) reply
+      PointsComm comm -> do
+        res <- lift $ runPointsComm comm gid (messageAuthor msg) reply
         case res of
           Right () -> reactPositive
           Left _ -> do
