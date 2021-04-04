@@ -19,7 +19,9 @@ import           Discord.Requests
 import           Discord.Types
 
 import           Commands
+import           Control.Concurrent
 import           Control.Lens
+import qualified Data.Map               as Map
 import           Schema
 import           Types
 import           Util
@@ -46,17 +48,30 @@ handlePointAssign rinfo = catchErr $ do
     time <- liftIO getCurrentTime
     runDB_ $ P.insert (Point (reactionMessageId rinfo) gid (reactionUserId rinfo) (userId $ messageAuthor msg) time)
     points <- runDB $ count [PointAssignedTo ==. userId (messageAuthor msg), PointGuild ==. gid]
-    run_ $ CreateMessage (messageChannel msg) $ "<@" <> tshow (userId $ messageAuthor msg)
-      <> "> has been awarded a bamboo shoot for being an awesome panda!\nThey now have " <> showPoints points  <> " total."
+    awardMsg <- run
+      . CreateMessage (messageChannel msg)
+      $ "<@" <> tshow (userId $ messageAuthor msg)
+        <> "> has been awarded a bamboo shoot for being an awesome panda!\nThey now have " <> showPoints points  <> " total."
+
     logS $ "Awarded one point to " <> unpack (userName $ messageAuthor msg) <> " for their message " <> show (messageId msg)
+    cache <- view  #cache
+    liftIO $ modifyMVar_ cache (pure . over #pointAwardMessages (Map.insert rinfo (messageChannel awardMsg, messageId awardMsg)))
 
 handlePointRemove :: ReactionInfo -> Handler ()
 handlePointRemove rinfo = catchErr $ do
   pointEmoji <- view $ #config . #pointAssignEmoji
-  when (pointEmoji == emojiName (reactionEmoji rinfo)) $ runDB_ $ deleteWhere
-    [ PointMessage ==. reactionMessageId rinfo
-    , PointAssignedBy ==. reactionUserId rinfo
-    ]
+  when (pointEmoji == emojiName (reactionEmoji rinfo)) $ do
+    runDB_ $ deleteWhere
+      [ PointMessage ==. reactionMessageId rinfo
+      , PointAssignedBy ==. reactionUserId rinfo
+      ]
+    cache <- view #cache
+    mmsg <- liftIO $ Map.lookup rinfo . view #pointAwardMessages <$> readMVar cache
+    case mmsg of
+      Nothing -> pure ()
+      Just msg -> do
+        run_ $ DeleteMessage msg
+        liftIO $ modifyMVar_ cache (pure . over #pointAwardMessages (Map.delete rinfo))
 
 runLeaderboardComm :: LeaderboardComm -> GuildId -> (Text -> Handler ()) -> Handler (Either LeaderboardCommError ())
 runLeaderboardComm _ gid reply = do

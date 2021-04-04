@@ -23,7 +23,7 @@ dependencies:
 - base >= 4.7 && < 5
 - aeson
 - conduit
-- ConfigFile
+- containers
 - discord-haskell
 - generic-lens
 - lens

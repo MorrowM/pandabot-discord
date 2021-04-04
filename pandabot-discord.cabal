@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b0ef44e4ab476a18cb053a73114beb37e44070b2476d460a224e21a38bb6c862
+-- hash: 8f2b4c556f64850bba0c281e029b3eb0098478277ef6a6b8e2b87ac0cb9de944
 
 name:           pandabot-discord
 version:        0.1.1
@@ -44,10 +44,10 @@ library
   default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GeneralisedNewtypeDeriving LambdaCase OverloadedLabels OverloadedStrings
   ghc-options: -Wall
   build-depends:
-      ConfigFile
-    , aeson
+      aeson
     , base >=4.7 && <5
     , conduit
+    , containers
     , discord-haskell
     , generic-lens
     , lens
@@ -72,10 +72,10 @@ executable pandabot-discord-exe
   default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GeneralisedNewtypeDeriving LambdaCase OverloadedLabels OverloadedStrings
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
-      ConfigFile
-    , aeson
+      aeson
     , base >=4.7 && <5
     , conduit
+    , containers
     , discord-haskell
     , generic-lens
     , lens
@@ -102,10 +102,10 @@ test-suite pandabot-discord-test
   default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GeneralisedNewtypeDeriving LambdaCase OverloadedLabels OverloadedStrings
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ConfigFile
-    , aeson
+      aeson
     , base >=4.7 && <5
     , conduit
+    , containers
     , discord-haskell
     , generic-lens
     , lens

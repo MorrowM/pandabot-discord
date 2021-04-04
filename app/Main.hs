@@ -2,6 +2,7 @@ module Main where
 
 import           Bot                  (eventHandler, onStart)
 import           Control.Concurrent
+import           Control.Lens
 import           Control.Monad.Except (runExceptT)
 import qualified Data.Text.IO         as TIO
 import           Discord              (RunDiscordOpts (discordOnEvent, discordOnStart, discordToken),
@@ -16,8 +17,8 @@ main = do
     Left err -> TIO.putStrLn $ "error parsing configuration: " <> err
     Right cfg -> do
       userFacingError <- runDiscord $ def
-        { discordOnStart = \dis -> runHandler (App { disHandle = dis, config = cfg, cache = cache' }) onStart,
-          discordToken = botToken cfg,
-          discordOnEvent = \dis e -> runHandler (App { disHandle = dis, config = cfg, cache = cache' }) (eventHandler e)
+        { discordOnStart = \dis -> runHandler (App dis cfg cache') onStart,
+          discordToken = cfg ^. #botToken,
+          discordOnEvent = \dis e -> runHandler (App dis cfg cache') (eventHandler e)
         }
       TIO.putStrLn userFacingError

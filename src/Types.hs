@@ -12,7 +12,7 @@ module Types
   , MonadDiscord (..)
   , parseConfigFile
   , fetchCache
-  , App
+  , App (App)
   , Config
   , Cache
   ) where
@@ -23,6 +23,8 @@ import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Data.Aeson
 import           Data.Bifunctor
+import           Data.Map                      (Map)
+import qualified Data.Map                      as Map
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T
@@ -130,13 +132,13 @@ data App = App
 
 data Cache = Cache
   { buttons            :: [Button]
-  , pointAwardMessages :: [MessageId ]
+  , pointAwardMessages :: Map ReactionInfo (ChannelId, MessageId)
   } deriving Generic
 
 fetchCache :: MonadIO m => m Cache
 fetchCache = do
-  btns <- runDB $ fmap (map entityVal) $ runDB $ selectList [] []
-  pure $ Cache { buttons = btns, pointAwardMessages = [] }
+  btns <- runDB . fmap (fmap entityVal) . runDB $ selectList [] []
+  pure $ Cache { buttons = btns, pointAwardMessages = Map.empty }
 
 -- | The application configuration
 data Config = Config
