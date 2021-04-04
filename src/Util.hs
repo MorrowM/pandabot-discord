@@ -1,7 +1,6 @@
 module Util
   ( wordsWithQuotes
   , myUserId
-  , stripEmoji
   , tryGetRoleByName
   , tryGetChannelByName
   , logS
@@ -11,7 +10,6 @@ module Util
 
 import           Control.Monad.IO.Class
 import           Data.Bits
-import           Data.Char
 import           Data.Maybe
 import           Data.Text              (Text)
 import qualified Data.Text              as T
@@ -38,12 +36,6 @@ myUserId = do
   dis <- getDis
   cache <- liftIO $ readCache dis
   pure $ userId $ _currentUser cache
-
--- | Strip an emoji into just its name.
-stripEmoji :: Text -> Text
-stripEmoji emoji = if T.all isAscii emoji
-  then T.takeWhile (/= ':') . T.drop 2 $ emoji
-  else emoji
 
 -- | Look up a role id by its name.
 tryGetRoleByName :: MonadDiscord m => GuildId -> Text -> m (Either (NameError Role) RoleId)

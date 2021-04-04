@@ -12,6 +12,7 @@ module Types
   , MonadDiscord (..)
   , parseConfigFile
   , fetchCache
+  , stripEmoji
   , App (App)
   , Config
   , Cache
@@ -23,6 +24,8 @@ import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Data.Aeson
 import           Data.Bifunctor
+import           Data.Char
+import           Data.Foldable
 import           Data.Map                      (Map)
 import qualified Data.Map                      as Map
 import           Data.Text                     (Text)
@@ -131,14 +134,24 @@ data App = App
   } deriving Generic
 
 data Cache = Cache
-  { buttons            :: [Button]
+  { buttons            :: Map (ChannelId, MessageId, Text) (RoleId, Text)
   , pointAwardMessages :: Map ReactionInfo (ChannelId, MessageId)
   } deriving Generic
 
 fetchCache :: MonadIO m => m Cache
 fetchCache = do
-  btns <- runDB . fmap (fmap entityVal) . runDB $ selectList [] []
+  btns <- fmap toMap . runDB . fmap (fmap entityVal) . runDB $ selectList [] []
   pure $ Cache { buttons = btns, pointAwardMessages = Map.empty }
+  where
+    toMap :: [Button] -> Map (ChannelId, MessageId, Text) (RoleId, Text)
+    toMap = foldl' (\m btn ->
+      Map.insert (buttonChannel btn, buttonMessage btn, stripEmoji $ buttonEmoji btn) (buttonRole btn, buttonEmoji btn) m) Map.empty
+
+-- | Strip an emoji into just its name.
+stripEmoji :: Text -> Text
+stripEmoji emoji = if T.all isAscii emoji
+  then T.takeWhile (/= ':') . T.drop 2 $ emoji
+  else emoji
 
 -- | The application configuration
 data Config = Config

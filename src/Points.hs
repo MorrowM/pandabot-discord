@@ -6,9 +6,12 @@ module Points
   , PointsCommError
   ) where
 
+import           Control.Concurrent
+import           Control.Lens
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.List
+import qualified Data.Map               as Map
 import           Data.Ord
 import           Data.Text              (Text, unpack)
 import qualified Data.Text              as T
@@ -19,9 +22,6 @@ import           Discord.Requests
 import           Discord.Types
 
 import           Commands
-import           Control.Concurrent
-import           Control.Lens
-import qualified Data.Map               as Map
 import           Schema
 import           Types
 import           Util

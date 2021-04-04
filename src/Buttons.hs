@@ -1,16 +1,20 @@
 module Buttons
   ( giveRole
   , removeRole
-  , buttons
+  , fetchButtons
   , buttonHandler
   , runButtonComm
   , ButtonCommError (..)
   ) where
 
+import           Control.Concurrent
+import           Control.Lens
 import           Control.Monad
+import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Maybe
-import           Data.Foldable
+import           Data.Map                  (Map)
+import qualified Data.Map                  as Map
 import           Data.Maybe
 import           Data.Text                 (Text)
 import           Database.Persist.Sql
@@ -31,8 +35,10 @@ removeRole :: MonadDiscord m => RoleId -> UserId -> GuildId -> m ()
 removeRole role user gid = run $ RemoveGuildMemberRole gid user role
 
 -- | Retrieve a list of the active buttons.
-buttons :: Handler [Button]
-buttons = fmap (map entityVal) $ runDB $ selectList [] []
+fetchButtons :: Handler (Map (ChannelId, MessageId, Text) (RoleId, Text))
+fetchButtons = do
+  cache <- view #cache
+  liftIO $ view #buttons <$> readMVar cache
 
 -- | Handle a button press.
 buttonHandler :: ReactionInfo -> Handler ()
@@ -42,17 +48,18 @@ buttonHandler rinfo = void . runMaybeT $ do
   gid <- MaybeT . pure $ reactionGuildId rinfo
   logS $ "User " <> show (reactionUserId rinfo) <> " reacted with " <> show (emojiName $ reactionEmoji rinfo) <> " on message " <> show (reactionMessageId rinfo)
   mem <- run $ GetGuildMember gid (reactionUserId rinfo)
-  btns <- lift buttons
-  for_ btns $ \button -> do
-    let bmsg = buttonMessage button
-        bemoji = buttonEmoji button
-        bchannel = buttonChannel button
-        brole = buttonRole button
-    when (bmsg == reactionMessageId rinfo && emojiName (reactionEmoji rinfo) == stripEmoji bemoji) $ do
+  btns <- lift fetchButtons
+  let bchannel = reactionChannelId rinfo
+      bmsg = reactionMessageId rinfo
+      bemoji = emojiName $ reactionEmoji rinfo
+      mButtonInfo = Map.lookup (bchannel, bmsg, bemoji) btns
+  case mButtonInfo of
+    Nothing -> pure ()
+    Just (brole, bFullEmoji) -> do
       if brole `elem` memberRoles mem
         then removeRole brole (reactionUserId rinfo) gid
         else giveRole brole (reactionUserId rinfo) gid
-      run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bemoji
+      run $ DeleteUserReaction (bchannel, bmsg) (reactionUserId rinfo) bFullEmoji
       logS $ "User " <> show (reactionUserId rinfo) <> " pressed the button " <> show bemoji <> " on message " <> show bmsg
 
 -- | Handle invokations of the button command.
@@ -61,18 +68,26 @@ runButtonComm btn gid = case btn of
   AddButton chanName emoji rName txt -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
       msg <- run $ CreateMessage chan txt
-      runDB_ $ insert $ Button chan (messageId msg) emoji rid
+      let newButton = Button chan (messageId msg) emoji rid
+      cache <- view #cache
+      liftIO $ modifyMVar_ cache (pure . over #buttons (Map.insert (chan, messageId msg, stripEmoji emoji) (rid, emoji)))
+      runDB_ $ insert newButton
       logS $ "Created button in channel " <> show chan <> " on message " <> show (messageId msg) <> " with emoji " <> show emoji <> " for role " <> show rid
       run_ $ CreateReaction (chan, messageId msg) emoji
 
   InsertButton chanName emoji rName mid -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
-      runDB_ $ insert $ Button chan mid emoji rid
+      let newButton = Button chan mid emoji rid
+      cache <- view #cache
+      liftIO $ modifyMVar_ cache (pure . over #buttons (Map.insert (chan, mid, stripEmoji emoji) (rid, emoji)))
+      runDB_ $ insert newButton
       logS $ "Inserted button in channel " <> show chan <> " on message " <> show mid <> " with emoji " <> show emoji <> " for role " <> show rid
       run_ $ CreateReaction (chan, mid) emoji
 
   RemoveButton chanName emoji rName mid -> do
     withRoleAndChannel gid rName chanName $ \rid chan -> do
+      cache <- view #cache
+      liftIO $ modifyMVar_ cache (pure . over #buttons (Map.delete (chan, mid, emoji)))
       runDB_ $ deleteWhere [ButtonChannel ==. chan, ButtonMessage ==. mid, ButtonEmoji ==. emoji, ButtonRole ==. rid]
       remainingRoles <- runDB $ selectFirst [ButtonChannel ==. chan, ButtonMessage ==. mid, ButtonEmoji ==. emoji] []
       when (isNothing remainingRoles) $ run_ $ DeleteOwnReaction (chan, mid) emoji
