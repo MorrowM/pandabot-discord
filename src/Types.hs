@@ -136,12 +136,13 @@ data App = App
 data Cache = Cache
   { buttons            :: Map (ChannelId, MessageId, Text) (RoleId, Text)
   , pointAwardMessages :: Map ReactionInfo (ChannelId, MessageId)
+  , guildMembers       :: Map (GuildId, UserId) GuildMember
   } deriving Generic
 
 fetchCache :: MonadIO m => m Cache
 fetchCache = do
   btns <- fmap toMap . runDB . fmap (fmap entityVal) . runDB $ selectList [] []
-  pure $ Cache { buttons = btns, pointAwardMessages = Map.empty }
+  pure $ Cache { buttons = btns, pointAwardMessages = Map.empty, Types.guildMembers = Map.empty }
   where
     toMap :: [Button] -> Map (ChannelId, MessageId, Text) (RoleId, Text)
     toMap = foldl' (\m btn ->

@@ -21,6 +21,7 @@ import           System.Exit
 import           Buttons
 import           Commands
 import           Control.Lens
+import qualified Data.Map                       as Map
 import           Points
 import           Schema
 import           Snappers
@@ -41,12 +42,32 @@ eventHandler :: Event -> Handler ()
 eventHandler event = case event of
   GuildMemberAdd gid mem -> do
     let uid = userId $ memberUser mem
+    cache <- view #cache
+    liftIO $ modifyMVar_ cache $
+      pure . over #guildMembers (Map.insert (gid, uid) mem)
     logS $ "User " <> show uid <> " joined guild " <> show gid
     addPandaRole uid gid
+  GuildMemberRemove gid usr -> do
+    let uid = userId usr
+    cache <- view #cache
+    liftIO $ modifyMVar_ cache $
+      pure . over #guildMembers (Map.delete (gid, uid))
+  GuildMemberUpdate gid rids usr nick -> do
+    let uid = userId usr
+    cache <- view #cache
+    liftIO $ modifyMVar_ cache $
+      pure . over #guildMembers (Map.adjust (\mem -> mem
+        { memberUser = usr
+        , memberNick = nick
+        , memberRoles = rids
+        }) (gid, uid))
   TypingStart _ -> pure ()
   PresenceUpdate _ -> pure ()
   Ready {} -> pure ()
-  GuildCreate {} -> pure ()
+  GuildCreate guild ginfo -> do
+    cache <- view #cache
+    liftIO $ modifyMVar_ cache $
+      pure . over #guildMembers (\m -> foldl' (\m' gm -> Map.insert (guildId guild, userId $ memberUser gm) gm m') m (guildMembers ginfo))
   MessageReactionAdd rinfo -> buttonHandler rinfo *> handlePointAssign rinfo
   MessageReactionRemove rinfo -> handlePointRemove rinfo
   MessageCreate msg -> handleMessageCreate msg

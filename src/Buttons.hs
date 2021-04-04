@@ -47,7 +47,8 @@ buttonHandler rinfo = void . runMaybeT $ do
   guard $ myUid /= reactionUserId rinfo
   gid <- MaybeT . pure $ reactionGuildId rinfo
   logS $ "User " <> show (reactionUserId rinfo) <> " reacted with " <> show (emojiName $ reactionEmoji rinfo) <> " on message " <> show (reactionMessageId rinfo)
-  mem <- run $ GetGuildMember gid (reactionUserId rinfo)
+  cache <- view #cache
+  mem <- MaybeT . pure . Map.lookup (gid, reactionUserId rinfo) . view #guildMembers =<< liftIO (readMVar cache)
   btns <- lift fetchButtons
   let bchannel = reactionChannelId rinfo
       bmsg = reactionMessageId rinfo

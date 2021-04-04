@@ -7,3 +7,5 @@
   user-facing interface.
 - Messages which notify users that they received a point will be removed if
   the point is revoked.
+- Role buttons are now cached in memory.
+- Guild member info is now cached in memory.
