@@ -23,10 +23,9 @@ import           Discord.Types          (Emoji (..), GuildId, GuildMember (..),
                                          User (userId, userName))
 
 import           Commands               (LeaderboardComm (..), PointsComm (..))
-import           Config                 (Config (..))
+import           Control.Lens
 import           Schema                 (EntityField (..), Point (..))
-import           Types                  (Handler, assertJust, catchErr,
-                                         getConfig, run, runDB, runDB_, run_)
+import           Types
 import           Util                   (isAdmin, logS, tshow)
 
 -- | Handle invokations of the points command.
@@ -45,7 +44,7 @@ handlePointAssign rinfo = catchErr $ do
   gid <- assertJust $ reactionGuildId rinfo
   mem <- run $ GetGuildMember gid (reactionUserId rinfo)
   admin <- isAdmin gid mem
-  npEmoji <- pointAssignEmoji <$> getConfig
+  npEmoji <- view $ #config . #pointAssignEmoji
   msg <- run $ GetChannelMessage (reactionChannelId rinfo, reactionMessageId rinfo)
   when (admin && emojiName (reactionEmoji rinfo) == npEmoji) $ do
     time <- liftIO getCurrentTime
@@ -57,7 +56,7 @@ handlePointAssign rinfo = catchErr $ do
 
 handlePointRemove :: ReactionInfo -> Handler ()
 handlePointRemove rinfo = catchErr $ do
-  pointEmoji <- pointAssignEmoji <$> getConfig
+  pointEmoji <- view $ #config . #pointAssignEmoji
   when (pointEmoji == emojiName (reactionEmoji rinfo)) $ runDB_ $ deleteWhere
     [ PointMessage ==. reactionMessageId rinfo
     , PointAssignedBy ==. reactionUserId rinfo

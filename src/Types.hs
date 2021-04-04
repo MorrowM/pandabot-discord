@@ -10,13 +10,17 @@ module Types
   , getConfig
   , NameError (..)
   , MonadDiscord (..)
+  , parseConfigFile
+  , fetchCache
+  , App (..)
+  , Config (..)
   ) where
 
 import           Control.Monad                 (void)
 import           Control.Monad.Except          (ExceptT (..), MonadError,
                                                 runExceptT, throwError)
 import           Control.Monad.Reader          (MonadReader,
-                                                ReaderT (runReaderT), ask, asks)
+                                                ReaderT (runReaderT))
 import           Control.Monad.Trans           (MonadIO (liftIO), MonadTrans,
                                                 lift)
 import           Data.Text                     (Text)
@@ -24,12 +28,18 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Time                     (defaultTimeLocale, formatTime,
                                                 getCurrentTime)
-import           Discord                       (DiscordHandle, FromJSON,
-                                                restCall)
+import           Discord                       (DiscordHandle, restCall)
 import           Discord.Internal.Rest.Prelude (Request)
 
-import           Config                        (App (..), Config (..))
+import           Control.Concurrent
+import           Control.Lens
+import           Data.Aeson
+import           Data.Bifunctor
 import           Database                      (DatabaseAction, db)
+import           Database.Persist
+import           Discord.Types
+import           GHC.Generics
+import           Schema
 
 -- | The main monad stack for the application.
 newtype Handler a = Handler
@@ -66,7 +76,7 @@ instance
   getDis = lift getDis
 
 instance MonadDiscord Handler where
-  getDis = asks appDis
+  getDis = view #disHandle
 
 -- | Escape from the @Handler@ monad into the @IO@ monad.
 runHandler :: App -> Handler () -> IO ()
@@ -92,8 +102,8 @@ runDB_ = void . runDB
 -- | Catch any errors, printing them to the console.
 catchErr :: Handler () -> Handler ()
 catchErr h = do
-  dis <- ask
-  eitherVal <- liftIO $ runReaderT (runExceptT $ getHandler h) dis
+  app <- view id
+  eitherVal <- liftIO $ runReaderT (runExceptT $ getHandler h) app
   case eitherVal of
     Left txt  -> liftIO $ TIO.putStr txt
     Right val -> pure val
@@ -110,8 +120,39 @@ assertJust (Just x) = pure x
 
 -- | Retrieve the @Config@ from the application context.
 getConfig :: MonadReader App m => m Config
-getConfig = asks appConfig
+getConfig = view #config
 
 -- | Represents a lookup error, where the lookup expects exactly one result
 -- but none or multiple are found.
 data NameError a = NameNotFound | NameAmbiguous [a]
+
+-- | The application environment.
+data App = App
+  { disHandle :: DiscordHandle
+  , config    :: Config
+  , cache     :: MVar Cache
+  } deriving Generic
+
+data Cache = Cache
+  { buttons            :: [Button]
+  , pointAwardMessages :: [MessageId ]
+  } deriving Generic
+
+fetchCache :: MonadIO m => m Cache
+fetchCache = do
+  btns <- runDB $ fmap (map entityVal) $ runDB $ selectList [] []
+  pure $ Cache { buttons = btns, pointAwardMessages = [] }
+
+-- | The application configuration
+data Config = Config
+  { botToken           :: Text
+  , welcomeRole        :: RoleId
+  , pointAssignEmoji   :: Text
+  , reactPositiveEmoji :: Text
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON Config
+instance ToJSON Config
+
+parseConfigFile :: FilePath -> ExceptT Text IO Config
+parseConfigFile path = ExceptT $ first T.pack <$> eitherDecodeFileStrict path

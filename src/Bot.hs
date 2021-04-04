@@ -31,18 +31,13 @@ import           System.Exit                    (ExitCode (ExitSuccess))
 import           Buttons                        (ButtonCommError (ChannelIdNameError, RoleIdNameError),
                                                  buttonHandler, runButtonComm)
 import           Commands                       (Comm (..), rootComm)
-import           Config                         (App, reactPositiveEmoji,
-                                                 welcomeRole)
 import           Points                         (handlePointAssign,
                                                  handlePointRemove,
                                                  runLeaderboardComm,
                                                  runPointsComm)
 import           Schema                         (migrateAll)
 import           Snappers                       (checkForSnapshots)
-import           Types                          (Handler, MonadDiscord (..),
-                                                 NameError (NameAmbiguous, NameNotFound),
-                                                 catchErr, getConfig, getDis,
-                                                 runDB)
+import           Types
 import           Util                           (isAdmin, logS, wordsWithQuotes)
 
 -- | Initialize the bot.

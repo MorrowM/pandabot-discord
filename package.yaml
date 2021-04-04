@@ -25,6 +25,7 @@ dependencies:
 - conduit
 - ConfigFile
 - discord-haskell
+- generic-lens
 - lens
 - monad-logger
 - mtl
@@ -38,12 +39,13 @@ dependencies:
 - wreq
 
 default-extensions:
-  - OverloadedStrings
+  - DeriveGeneric
   - FlexibleContexts
+  - FlexibleInstances
   - GeneralisedNewtypeDeriving
   - LambdaCase
-  - FlexibleInstances
-  - DeriveGeneric
+  - OverloadedLabels
+  - OverloadedStrings
 
 ghc-options:
   - -Wall
