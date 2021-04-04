@@ -7,11 +7,8 @@ module Commands
   ) where
 
 import           Data.Text           (Text)
-import           Discord.Types       (MessageId)
-import           Options.Applicative (Parser, ParserInfo, argument, auto,
-                                      command, fullDesc, header, helper,
-                                      hsubparser, info, metavar, progDesc, str,
-                                      (<**>))
+import           Discord.Types
+import           Options.Applicative
 
 -- | The overall command tree.
 data Comm

@@ -3,42 +3,29 @@ module Bot
 , eventHandler
 ) where
 
-import           Control.Concurrent             (forkIO)
-import           Control.Monad                  (guard, void)
-import           Control.Monad.IO.Class         (MonadIO (liftIO))
-import           Control.Monad.Reader           (MonadReader)
-import           Control.Monad.Trans.Class      (lift)
-import           Control.Monad.Trans.Maybe      (MaybeT (..))
-import           Data.List                      (isPrefixOf)
+import           Control.Concurrent
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Reader
+import           Control.Monad.Trans.Maybe
+import           Data.List
 import qualified Data.Text                      as T
-import           Database.Persist.Sql           (runMigration)
-import           Discord                        (Cache (_currentUser),
-                                                 readCache)
-import           Discord.Requests               (ChannelRequest (CreateMessage, CreateReaction),
-                                                 GuildRequest (AddGuildMemberRole, GetGuildMember))
-import           Discord.Types                  (Event (..), GuildId,
-                                                 GuildMember (memberUser),
-                                                 Message (..), Role (roleId),
-                                                 User (userId, userName),
-                                                 UserId)
-import           Options.Applicative            (ParserFailure (execFailure),
-                                                 ParserHelp (helpUsage),
-                                                 ParserResult (Failure, Success),
-                                                 defaultPrefs, execParserPure)
-import           Options.Applicative.Help.Chunk (Chunk (unChunk))
-import           System.Exit                    (ExitCode (ExitSuccess))
+import           Database.Persist.Sql
+import           Discord
+import           Discord.Requests
+import           Discord.Types
+import           Options.Applicative
+import           Options.Applicative.Help.Chunk
+import           System.Exit
 
-import           Buttons                        (ButtonCommError (ChannelIdNameError, RoleIdNameError),
-                                                 buttonHandler, runButtonComm)
-import           Commands                       (Comm (..), rootComm)
-import           Points                         (handlePointAssign,
-                                                 handlePointRemove,
-                                                 runLeaderboardComm,
-                                                 runPointsComm)
-import           Schema                         (migrateAll)
-import           Snappers                       (checkForSnapshots)
+import           Buttons
+import           Commands
+import           Control.Lens
+import           Points
+import           Schema
+import           Snappers
 import           Types
-import           Util                           (isAdmin, logS, wordsWithQuotes)
+import           Util
 
 -- | Initialize the bot.
 onStart :: Handler ()
@@ -138,7 +125,7 @@ runComm args msg = void . runMaybeT $ do
 
     reactPositive :: (MonadDiscord m, MonadReader App m) => m ()
     reactPositive = do
-      emo <- reactPositiveEmoji <$> getConfig
+      emo <- view #reactPositiveEmoji <$> getConfig
       liftIO $ print emo
       run $ CreateReaction (messageChannel msg, messageId msg) emo
     reactNegative = run $ CreateReaction (messageChannel msg, messageId msg) ":x:"
@@ -146,6 +133,6 @@ runComm args msg = void . runMaybeT $ do
 
 addPandaRole :: UserId -> GuildId -> Handler ()
 addPandaRole usr gid = do
-  welcome <- welcomeRole <$> getConfig
+  welcome <-  view #welcomeRole <$> getConfig
   run $ AddGuildMemberRole gid usr welcome
 

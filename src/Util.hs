@@ -9,26 +9,19 @@ module Util
   , isAdmin
   ) where
 
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Data.Bits              (Bits ((.&.)))
-import           Data.Char              (isAscii)
-import           Data.Maybe             (catMaybes)
+import           Control.Monad.IO.Class
+import           Data.Bits
+import           Data.Char
+import           Data.Maybe
 import           Data.Text              (Text)
 import qualified Data.Text              as T
-import           Data.Time              (defaultTimeLocale, formatTime,
-                                         getCurrentTime)
-import           Discord                (Cache (_currentUser), readCache)
-import           Discord.Requests       (GuildRequest (GetGuildChannels, GetGuildRoles))
-import           Discord.Types          (Channel (ChannelText, channelId, channelName),
-                                         ChannelId, GuildId,
-                                         GuildMember (memberRoles),
-                                         Role (roleId, roleName, rolePerms),
-                                         RoleId, Snowflake, User (userId),
-                                         UserId)
-import           Text.Read              (readMaybe)
+import           Data.Time
+import           Discord
+import           Discord.Requests
+import           Discord.Types
+import           Text.Read
 
-import           Types                  (MonadDiscord, NameError (..), getDis,
-                                         run)
+import           Types
 
 -- | Split a string into words, taking quotes clauses into account.
 wordsWithQuotes :: Text -> [Text]

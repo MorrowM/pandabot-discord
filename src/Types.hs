@@ -12,33 +12,28 @@ module Types
   , MonadDiscord (..)
   , parseConfigFile
   , fetchCache
-  , App (..)
-  , Config (..)
+  , App
+  , Config
+  , Cache
   ) where
-
-import           Control.Monad                 (void)
-import           Control.Monad.Except          (ExceptT (..), MonadError,
-                                                runExceptT, throwError)
-import           Control.Monad.Reader          (MonadReader,
-                                                ReaderT (runReaderT))
-import           Control.Monad.Trans           (MonadIO (liftIO), MonadTrans,
-                                                lift)
-import           Data.Text                     (Text)
-import qualified Data.Text                     as T
-import qualified Data.Text.IO                  as TIO
-import           Data.Time                     (defaultTimeLocale, formatTime,
-                                                getCurrentTime)
-import           Discord                       (DiscordHandle, restCall)
-import           Discord.Internal.Rest.Prelude (Request)
 
 import           Control.Concurrent
 import           Control.Lens
+import           Control.Monad.Except
+import           Control.Monad.Reader
 import           Data.Aeson
 import           Data.Bifunctor
-import           Database                      (DatabaseAction, db)
+import           Data.Text                     (Text)
+import qualified Data.Text                     as T
+import qualified Data.Text.IO                  as T
+import           Data.Time
 import           Database.Persist
+import           Discord                       (DiscordHandle, restCall)
+import           Discord.Internal.Rest.Prelude (Request)
 import           Discord.Types
 import           GHC.Generics
+
+import           Database
 import           Schema
 
 -- | The main monad stack for the application.
@@ -89,7 +84,7 @@ runHandler dis h = do
     logS s = do
       t <- getCurrentTime
       let fmt = T.pack $ formatTime defaultTimeLocale "[%F %T] " t
-      TIO.putStrLn $ fmt <> s
+      T.putStrLn $ fmt <> s
 
 -- | Run a database action in the @Handler@ monad.
 runDB :: MonadIO m => DatabaseAction a -> m a
@@ -105,7 +100,7 @@ catchErr h = do
   app <- view id
   eitherVal <- liftIO $ runReaderT (runExceptT $ getHandler h) app
   case eitherVal of
-    Left txt  -> liftIO $ TIO.putStr txt
+    Left txt  -> liftIO $ T.putStr txt
     Right val -> pure val
 
 -- | Throw an error given a @Bool@.

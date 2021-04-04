@@ -7,33 +7,20 @@ module Buttons
   , ButtonCommError (..)
   ) where
 
-import           Control.Monad             (guard, void, when)
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Maybe (MaybeT (..))
-import           Data.Foldable             (for_)
-import           Data.Maybe                (isNothing)
+import           Control.Monad
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Maybe
+import           Data.Foldable
+import           Data.Maybe
 import           Data.Text                 (Text)
-import           Database.Persist.Sql      (Entity (entityVal),
-                                            PersistQueryRead (selectFirst),
-                                            PersistQueryWrite (deleteWhere),
-                                            PersistStoreWrite (insert),
-                                            selectList, (==.))
-import           Discord.Requests          (ChannelRequest (CreateMessage, CreateReaction, DeleteOwnReaction, DeleteUserReaction),
-                                            GuildRequest (AddGuildMemberRole, GetGuildMember, RemoveGuildMemberRole))
-import           Discord.Types             (ChannelId, Emoji (emojiName),
-                                            GuildId, GuildMember (memberRoles),
-                                            Message (messageId),
-                                            ReactionInfo (reactionEmoji, reactionGuildId, reactionMessageId, reactionUserId),
-                                            Role, RoleId, UserId)
+import           Database.Persist.Sql
+import           Discord.Requests
+import           Discord.Types
 
-import           Commands                  (ButtonComm (..))
-import           Schema                    (Button (..),
-                                            EntityField (ButtonChannel, ButtonEmoji, ButtonMessage, ButtonRole))
-import           Types                     (Handler, MonadDiscord (..),
-                                            NameError, runDB, runDB_)
-import           Util                      (logS, myUserId, stripEmoji,
-                                            tryGetChannelByName,
-                                            tryGetRoleByName)
+import           Commands
+import           Schema
+import           Types
+import           Util
 
 -- | Assign a role to a given guild member.
 giveRole :: MonadDiscord m => RoleId -> UserId -> GuildId -> m ()

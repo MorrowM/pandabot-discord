@@ -6,27 +6,23 @@ module Points
   , PointsCommError
   ) where
 
-import           Control.Monad          (when)
-import           Control.Monad.IO.Class (liftIO)
-import           Data.List              (group, sortOn)
-import           Data.Ord               (Down (..))
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Data.List
+import           Data.Ord
 import           Data.Text              (Text, unpack)
 import qualified Data.Text              as T
-import           Data.Time              (getCurrentTime)
-import           Data.Traversable       (for)
-import           Database.Persist.Sql   (PersistQueryRead (count),
-                                         SelectOpt (..), deleteWhere, entityVal,
-                                         insert, selectList, (==.))
-import           Discord.Requests       (ChannelRequest (..), GuildRequest (..))
-import           Discord.Types          (Emoji (..), GuildId, GuildMember (..),
-                                         Message (..), ReactionInfo (..),
-                                         User (userId, userName))
+import           Data.Time
+import           Data.Traversable
+import           Database.Persist.Sql   as P
+import           Discord.Requests
+import           Discord.Types
 
-import           Commands               (LeaderboardComm (..), PointsComm (..))
+import           Commands
 import           Control.Lens
-import           Schema                 (EntityField (..), Point (..))
+import           Schema
 import           Types
-import           Util                   (isAdmin, logS, tshow)
+import           Util
 
 -- | Handle invokations of the points command.
 runPointsComm :: PointsComm -> GuildId -> User -> (Text -> Handler ()) -> Handler (Either PointsCommError ())
@@ -48,7 +44,7 @@ handlePointAssign rinfo = catchErr $ do
   msg <- run $ GetChannelMessage (reactionChannelId rinfo, reactionMessageId rinfo)
   when (admin && emojiName (reactionEmoji rinfo) == npEmoji) $ do
     time <- liftIO getCurrentTime
-    runDB_ $ insert (Point (reactionMessageId rinfo) gid (reactionUserId rinfo) (userId $ messageAuthor msg) time)
+    runDB_ $ P.insert (Point (reactionMessageId rinfo) gid (reactionUserId rinfo) (userId $ messageAuthor msg) time)
     points <- runDB $ count [PointAssignedTo ==. userId (messageAuthor msg), PointGuild ==. gid]
     run_ $ CreateMessage (messageChannel msg) $ "<@" <> tshow (userId $ messageAuthor msg)
       <> "> has been awarded a bamboo shoot for being an awesome panda!\nThey now have " <> showPoints points  <> " total."

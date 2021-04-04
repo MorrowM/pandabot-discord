@@ -3,10 +3,8 @@ module Instances () where
 
 import           Data.Generics.Labels ()
 import           Data.Text            (pack)
-import           Database.Persist.Sql (PersistField (..), PersistFieldSql (..),
-                                       PersistValue (PersistInt64),
-                                       SqlType (SqlInt64))
-import           Discord.Types        (Snowflake)
+import           Database.Persist.Sql
+import           Discord.Types
 
 
 instance PersistField Snowflake where
