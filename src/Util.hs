@@ -1,85 +1,26 @@
-module Util
-  ( wordsWithQuotes
-  , myUserId
-  , tryGetRoleByName
-  , tryGetChannelByName
-  , logS
-  , tshow
-  , isAdmin
-  ) where
+module Util where
 
-import           Control.Monad.IO.Class
-import           Data.Bits
-import           Data.Maybe
-import           Data.Text              (Text)
-import qualified Data.Text              as T
-import           Data.Time
-import           Discord
-import           Discord.Requests
-import           Discord.Types
-import           Text.Read
+import           Calamity
+import           Control.Lens
+import           Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy as L
+import           Data.Text.Lens
+import qualified Di
+import qualified DiPolysemy     as DiP
+import qualified Polysemy       as P
+import qualified Polysemy.Fail  as P
 
-import           Types
 
--- | Split a string into words, taking quotes clauses into account.
-wordsWithQuotes :: Text -> [Text]
-wordsWithQuotes = concat . wordsEveryOther . T.splitOn "\""
-  where
-    wordsEveryOther :: [Text] -> [[Text]]
-    wordsEveryOther []           = []
-    wordsEveryOther [z]          = [T.words z]
-    wordsEveryOther (x : y : xs) = T.words x : [y] : wordsEveryOther xs
+handleFailByLogging :: BotC r => P.Sem (P.Fail : r) a -> P.Sem r ()
+handleFailByLogging m = do
+  r <- P.runFail m
+  case r of
+    Left e -> DiP.error @Text @Di.Path (e ^. packed)
+    _      -> pure ()
 
--- | Retrieve the bot's own user id.
-myUserId :: MonadDiscord m => m UserId
-myUserId = do
-  dis <- getDis
-  cache <- liftIO $ readCache dis
-  pure $ userId $ _currentUser cache
+info, debug :: BotC r => Text -> P.Sem r ()
+info = DiP.info @Text @Di.Path
+debug = DiP.info @Text @Di.Path
 
--- | Look up a role id by its name.
-tryGetRoleByName :: MonadDiscord m => GuildId -> Text -> m (Either (NameError Role) RoleId)
-tryGetRoleByName gid name = do
-  roles <- run $ GetGuildRoles gid
-  pure $ tryGetIdByName roles roleName roleId name
-
--- | Look up a channel id by its name.
-tryGetChannelByName :: MonadDiscord m => GuildId -> Text -> m (Either (NameError (Text, ChannelId)) ChannelId)
-tryGetChannelByName gid name = do
-  mchans <- run $ GetGuildChannels gid
-  let chans = catMaybes $ isText <$> mchans
-  pure $ tryGetIdByName chans fst snd name
-  where
-    isText chan = case chan of
-      ChannelText {} -> Just (channelName chan, channelId chan)
-      _              -> Nothing
-
-tryGetIdByName :: [a] -> ( a -> Text) -> (a -> Snowflake) -> Text -> Either (NameError a) Snowflake
-tryGetIdByName vals toText toId name = case filter ((==name) . toText) vals of
-  [] -> case readMaybe (T.unpack name) :: Maybe Snowflake of
-    Nothing    -> Left NameNotFound
-    Just flake -> Right flake
-  [x] -> Right $ toId x
-  xs -> Left (NameAmbiguous xs)
-
--- | Check whether a given member has admin permissions.
-isAdmin :: MonadDiscord m => GuildId -> GuildMember -> m Bool
-isAdmin gid mem = do
-  roles <- run $ GetGuildRoles gid
-  pure $ any (`elem` memberRoles mem) (roleId <$> filter isAdminRole roles)
-  where
-    isSet b n = (b .&. n) == b
-    isAdminRole = isSet 8 . rolePerms
-
--- | Like @show@, but returns @Text@ instead.
-tshow :: Show a => a -> Text
-tshow = T.pack . show
-
--- | Log a string with a timestamp.
-logS :: MonadIO m => String -> m ()
-logS s = liftIO $ do
-  t <- getCurrentTime
-  let fmt = formatTime defaultTimeLocale "[%F %T] " t
-      output = fmt <> s <> "\n"
-  putStr output
-  appendFile "log.txt" output
+tellt :: (BotC r, Tellable t) => t -> Text -> P.Sem r (Either RestError Message)
+tellt t m = tell t $ L.toStrict m

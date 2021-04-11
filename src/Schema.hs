@@ -15,26 +15,26 @@
 
 module Schema where
 
+import           Calamity
 import           Data.Text           (Text)
+import           Data.Time
 import           Database.Persist.TH
-import           Discord.Types
-
-import           Instances           ()
+import           Orphans             ()
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
   [persistLowerCase|
   Button
-    channel ChannelId
-    message MessageId
+    channel (Snowflake Channel)
+    message (Snowflake Message)
     emoji Text
-    role RoleId
+    role (Snowflake Role)
     deriving Show
 
   Point
-    message MessageId
-    guild GuildId
-    assignedBy UserId
-    assignedTo UserId
+    message (Snowflake Message)
+    guild (Snowflake Guild)
+    assignedBy (Snowflake User)
+    assignedTo (Snowflake User)
     assignedAt UTCTime
 |]

@@ -1,123 +1,74 @@
-cabal-version: 1.12
+cabal-version:      2.2
+name:               pandabot-discord
+version:            0.2
+description:
+  Please see the README on GitHub at <https://github.com/MorrowM/pandabot-discord#readme>
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
---
--- see: https://github.com/sol/hpack
---
--- hash: 8f2b4c556f64850bba0c281e029b3eb0098478277ef6a6b8e2b87ac0cb9de944
-
-name:           pandabot-discord
-version:        0.1.1
-description:    Please see the README on GitHub at <https://github.com/githubuser/pandabot-discord#readme>
-homepage:       https://github.com/githubuser/pandabot-discord#readme
-bug-reports:    https://github.com/githubuser/pandabot-discord/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2020 Author name here
-license:        BSD3
-license-file:   LICENSE
-build-type:     Simple
+homepage:           https://github.com/githubuser/pandabot-discord#readme
+bug-reports:        https://github.com/githubuser/pandabot-discord/issues
+author:             Morrow
+maintainer:         example@example.com
+copyright:          2021 Morrw
+license:            BSD-3-Clause
+license-file:       LICENSE
+build-type:         Simple
 extra-source-files:
-    README.md
-    ChangeLog.md
-
-source-repository head
-  type: git
-  location: https://github.com/githubuser/pandabot-discord
+  ChangeLog.md
+  README.md
 
 library
-  exposed-modules:
-      Bot
-      Buttons
-      Commands
-      Database
-      Instances
-      Points
-      Schema
-      Snappers
-      Types
-      Util
-  other-modules:
-      Paths_pandabot_discord
-  hs-source-dirs:
-      src
-  default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GeneralisedNewtypeDeriving LambdaCase OverloadedLabels OverloadedStrings
-  ghc-options: -Wall
+  hs-source-dirs:     src
+  default-extensions:
+    DataKinds
+    , FlexibleContexts
+    , GADTs
+    , LambdaCase
+    , OverloadedLabels
+    , OverloadedStrings
+    , PolyKinds
+    , ScopedTypeVariables
+    , TemplateHaskell
+    , TypeApplications
+    , TypeOperators
+    , DeriveGeneric
+
+  ghc-options:        -Wall
   build-depends:
-      aeson
-    , base >=4.7 && <5
+    , aeson
+    , base               >=4.7 && <5
+    , calamity
     , conduit
-    , containers
-    , discord-haskell
+    , data-default
+    , di
+    , di-polysemy
     , generic-lens
     , lens
     , monad-logger
-    , mtl
-    , optparse-applicative
     , persistent
     , persistent-sqlite
-    , persistent-template
+    , polysemy
     , text
+    , text-show
     , time
-    , transformers
-    , wreq
-  default-language: Haskell2010
+    , unboxing-vector
+
+  default-language:   Haskell2010
+  exposed-modules:
+    Bot
+    Commands
+    Database
+    Handlers
+    Orphans
+    Schema
+    Types
+    Util
 
 executable pandabot-discord-exe
-  main-is: Main.hs
-  other-modules:
-      Paths_pandabot_discord
-  hs-source-dirs:
-      app
-  default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GeneralisedNewtypeDeriving LambdaCase OverloadedLabels OverloadedStrings
-  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -O2
+  main-is:          Main.hs
+  hs-source-dirs:   app
+  ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
-      aeson
-    , base >=4.7 && <5
-    , conduit
-    , containers
-    , discord-haskell
-    , generic-lens
-    , lens
-    , monad-logger
-    , mtl
-    , optparse-applicative
+    , base              >=4.7 && <5
     , pandabot-discord
-    , persistent
-    , persistent-sqlite
-    , persistent-template
-    , text
-    , time
-    , transformers
-    , wreq
-  default-language: Haskell2010
 
-test-suite pandabot-discord-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      Paths_pandabot_discord
-  hs-source-dirs:
-      test
-  default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GeneralisedNewtypeDeriving LambdaCase OverloadedLabels OverloadedStrings
-  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      aeson
-    , base >=4.7 && <5
-    , conduit
-    , containers
-    , discord-haskell
-    , generic-lens
-    , lens
-    , monad-logger
-    , mtl
-    , optparse-applicative
-    , pandabot-discord
-    , persistent
-    , persistent-sqlite
-    , persistent-template
-    , text
-    , time
-    , transformers
-    , wreq
   default-language: Haskell2010

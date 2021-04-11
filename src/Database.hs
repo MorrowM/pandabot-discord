@@ -1,24 +1,28 @@
-module Database
-  ( db
-  , DatabaseAction
-  )
-where
+module Database where
 
 import           Conduit
-import           Control.Monad.Logger
+import           Control.Monad
+import           Control.Monad.Logger    (LoggingT, runStdoutLoggingT)
 import           Data.Text               (Text)
 import           Database.Persist.Sqlite
+import qualified Polysemy                as P
 
--- | An type alias for persistent database operations.
 type DatabaseAction a = SqlPersistT (LoggingT (ResourceT IO)) a
 
-connectionString :: Text
-connectionString = "database.sqlite"
+data Persistable m a where
+  Db :: DatabaseAction a -> Persistable m a
 
--- | Run a database action in the IO monad.
-db :: DatabaseAction a -> IO a
-db =
-  runResourceT
+P.makeSem ''Persistable
+
+db_ :: P.Member Persistable r => DatabaseAction a -> P.Sem r ()
+db_ = void . db
+
+runPersistWith :: P.Member (P.Embed IO) r => Text -> P.Sem (Persistable : r) a -> P.Sem r a
+runPersistWith conn = P.interpret $ \case
+  Db action ->
+    P.embed
+    . runResourceT
     . runStdoutLoggingT
-    . withSqliteConn connectionString
+    . withSqliteConn conn
     . runSqlConn
+    $ action

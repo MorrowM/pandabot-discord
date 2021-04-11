@@ -1,85 +1,40 @@
-module Commands
-  ( Comm (..)
-  , ButtonComm (..)
-  , PointsComm (..)
-  , LeaderboardComm (..)
-  , rootComm
-  ) where
+module Commands where
 
-import           Data.Text           (Text)
-import           Discord.Types
-import           Options.Applicative
+import           Calamity
+import           Calamity.Commands
+import           Control.Lens
+import           Control.Monad
+import           Data.Default
+import           Data.Text         (Text, pack)
+import           Database.Persist
+import qualified Polysemy          as P
+import           TextShow
 
--- | The overall command tree.
-data Comm
-  = ButtonComm ButtonComm
-  | PointsComm PointsComm
-  | LeaderboardComm LeaderboardComm
+import           Database
+import           Schema
+import           Util
 
--- | The root command parser. Pass @True@ if the invoking user has admin perms.
-rootComm :: Bool -> ParserInfo Comm
-rootComm admin =
-  info
-    (rootSubComm admin <**> helper)
-    ( fullDesc
-        <> progDesc "Pandabot"
-        <> header "A bot for pandas! (duh)"
-    )
 
-rootSubComm :: Bool -> Parser Comm
-rootSubComm admin =
-  hsubparser
-    ( (if admin then command "button" (info (ButtonComm <$> buttonSubComm) (progDesc "Manage role buttons")) else mempty)
-   <> command "shoots" (info (PointsComm <$> pointsSubComm) (progDesc "How many do you have?"))
-   <> command "leaderboard" (info (LeaderboardComm <$> leaderboardSubComm) (progDesc "Who has the most shoots?"))
-    )
+registerBotCommands :: (BotC r, P.Member ParsePrefix r, P.Member Persistable r) => P.Sem r ()
+registerBotCommands = void $ addCommands $ do
+  void helpCommand
+  group "button" $ do
+    void $ command @'[GuildChannel, RawEmoji, Role, Text] "add" $ \_ctx chan emoj role txt -> do
+      Right msg <- invoke $ CreateMessage chan (def & #content ?~ txt)
+      let newButton = Button (getID chan) (getID msg) (pack $ show emoj) (getID role)
+      info $ "Inserting button " <> showtl (FromStringShow newButton)
+      db_ $ insert newButton
+      void . invoke $ CreateReaction chan msg emoj
 
--- | The button command tree.
-data ButtonComm
-  = AddButton Text Text Text Text
-  | InsertButton Text Text Text MessageId
-  | RemoveButton Text Text Text MessageId
+    void $ command @'[GuildChannel, RawEmoji, Role, Snowflake Message] "insert" $ \_ctx chan emoj role msg -> do
+      let newButton = Button (getID chan) msg (pack $ show emoj) (getID role)
+      info $ "Inserting button " <> showtl (FromStringShow newButton)
+      db_ $ insert newButton
+      void . invoke $ CreateReaction chan msg emoj
 
-addOptions :: Parser ButtonComm
-addOptions =
-  AddButton
-    <$> argument str (metavar "CHANNEL")
-    <*> argument str (metavar "EMOJI")
-    <*> argument str (metavar "ROLE")
-    <*> argument str (metavar "MESSAGE_CONTENT")
+    void $ command @'[GuildChannel, RawEmoji, Snowflake Message] "reomve" $ \_ctx chan emoj msg -> do
+      info $ "Deleting button " <> showtl (chan, emoj, msg)
+      db_ $ deleteWhere [ButtonChannel ==. getID chan, ButtonMessage ==. msg, ButtonEmoji ==. showt emoj]
+      void . invoke $ DeleteOwnReaction chan msg emoj
 
-insertOptions :: Parser ButtonComm
-insertOptions =
-  InsertButton
-    <$> argument str (metavar "CHANNEL")
-    <*> argument str (metavar "EMOJI")
-    <*> argument str (metavar "ROLE")
-    <*> argument auto (metavar "MESSAGE_ID")
 
-buttonSubComm :: Parser ButtonComm
-buttonSubComm =
-  hsubparser
-    ( command "add" (info addOptions (progDesc "Add a button"))
-   <> command "insert" (info insertOptions (progDesc "Insert a button into an existing message"))
-   <> command "remove" (info removeOptions (progDesc "Remove an existing button from a message"))
-    )
-
-removeOptions :: Parser ButtonComm
-removeOptions =
-  RemoveButton
-    <$> argument str (metavar "CHANNEL")
-    <*> argument str (metavar "EMOJI")
-    <*> argument str (metavar "ROLE")
-    <*> argument auto (metavar "MESSAGE_ID")
-
--- | The points command tree,
-data PointsComm = ViewSelf
-
-pointsSubComm :: Parser PointsComm
-pointsSubComm = pure ViewSelf
-
--- | The leaderboard command tree.
-data LeaderboardComm = ViewLeaderboard
-
-leaderboardSubComm :: Parser LeaderboardComm
-leaderboardSubComm = pure ViewLeaderboard
