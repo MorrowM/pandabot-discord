@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingVia        #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-module Orphans where
+module Pandabot.Orphans () where
 
 import           Calamity
 import           Data.Word

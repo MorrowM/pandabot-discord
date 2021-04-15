@@ -13,13 +13,13 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
-module Schema where
+module Pandabot.Schema where
 
 import           Calamity
 import           Data.Text           (Text)
 import           Data.Time
 import           Database.Persist.TH
-import           Orphans             ()
+import           Pandabot.Orphans    ()
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
@@ -37,4 +37,5 @@ share
     assignedBy (Snowflake User)
     assignedTo (Snowflake User)
     assignedAt UTCTime
+    deriving Show
 |]

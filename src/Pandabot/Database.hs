@@ -1,4 +1,9 @@
-module Database where
+module Pandabot.Database
+  ( Persistable (..)
+  , db
+  , db_
+  , runPersistWith
+  ) where
 
 import           Conduit
 import           Control.Monad
@@ -14,9 +19,11 @@ data Persistable m a where
 
 P.makeSem ''Persistable
 
+-- | Like `db`, but discards the result.
 db_ :: P.Member Persistable r => DatabaseAction a -> P.Sem r ()
 db_ = void . db
 
+-- | A `polysemy` effect handler for `persistent` actions.
 runPersistWith :: P.Member (P.Embed IO) r => Text -> P.Sem (Persistable : r) a -> P.Sem r a
 runPersistWith conn = P.interpret $ \case
   Db action ->

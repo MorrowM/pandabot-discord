@@ -4,11 +4,11 @@ version:            0.2
 description:
   Please see the README on GitHub at <https://github.com/MorrowM/pandabot-discord#readme>
 
-homepage:           https://github.com/githubuser/pandabot-discord#readme
-bug-reports:        https://github.com/githubuser/pandabot-discord/issues
+homepage:           https://github.com/MorrowM/pandabot-discord#readme
+bug-reports:        https://github.com/MorrowM/pandabot-discord/issues
 author:             Morrow
 maintainer:         example@example.com
-copyright:          2021 Morrw
+copyright:          2021 Morrow
 license:            BSD-3-Clause
 license-file:       LICENSE
 build-type:         Simple
@@ -20,25 +20,31 @@ library
   hs-source-dirs:     src
   default-extensions:
     DataKinds
-    , FlexibleContexts
-    , GADTs
-    , LambdaCase
-    , OverloadedLabels
-    , OverloadedStrings
-    , PolyKinds
-    , ScopedTypeVariables
-    , TemplateHaskell
-    , TypeApplications
-    , TypeOperators
-    , DeriveGeneric
+    DeriveGeneric
+    FlexibleContexts
+    GADTs
+    LambdaCase
+    OverloadedLabels
+    OverloadedStrings
+    PartialTypeSignatures
+    PolyKinds
+    ScopedTypeVariables
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    ViewPatterns
 
   ghc-options:        -Wall
   build-depends:
     , aeson
-    , base               >=4.7 && <5
-    , calamity
+    , base               >=4.7      && <5
+    , calamity           >=0.1.28.2
     , conduit
+    , containers
     , data-default
+    , data-flags
     , di
     , di-polysemy
     , generic-lens
@@ -54,14 +60,15 @@ library
 
   default-language:   Haskell2010
   exposed-modules:
-    Bot
-    Commands
-    Database
-    Handlers
-    Orphans
-    Schema
-    Types
-    Util
+    Pandabot
+    Pandabot.Commands
+    Pandabot.Database
+    Pandabot.Handlers
+    Pandabot.Hotfix
+    Pandabot.Orphans
+    Pandabot.Schema
+    Pandabot.Types
+    Pandabot.Util
 
 executable pandabot-discord-exe
   main-is:          Main.hs

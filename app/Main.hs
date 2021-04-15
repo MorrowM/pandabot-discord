@@ -1,6 +1,6 @@
 module Main where
 
-import qualified Bot
+import qualified Pandabot
 
 main :: IO ()
-main = Bot.main
+main = Pandabot.main
