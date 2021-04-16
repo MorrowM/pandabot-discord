@@ -18,10 +18,28 @@ data Config = Config
   , reactPositiveEmoji :: RawEmoji
   , commandPrefix      :: Text
   , connectionString   :: Text
+  , voiceConfig        :: VoiceConfig
   } deriving (Show, Eq, Generic)
 
 instance FromJSON Config
 instance ToJSON Config
+
+newtype VoiceConfig = VoiceConfig
+  { roles :: [VoiceRole]
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON VoiceConfig
+instance ToJSON VoiceConfig
+
+data VoiceRole = VoiceRole
+  { name          :: Text
+  , role          :: Snowflake Role
+  , voiceChannels :: [Snowflake VoiceChannel]
+  , textChannel   :: Maybe (Snowflake TextChannel)
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON VoiceRole
+instance ToJSON VoiceRole
 
 -- | A record of which replies have been made for which message,
 -- in order to be able to delete them when necessary.

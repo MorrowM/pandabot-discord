@@ -4,6 +4,7 @@ module Pandabot.Util
   , debug
   , tellt
   , showPoints
+  , whenJust
   ) where
 
 import           Calamity
@@ -40,3 +41,6 @@ showPoints :: Int -> T.Text
 showPoints 0 = "no bamboo shoots"
 showPoints 1 = "1 bamboo shoot"
 showPoints n = showt n <> " bamboo shoots"
+
+whenJust :: Applicative f => Maybe a -> (a -> f ()) -> f ()
+whenJust = flip $ maybe (pure ())
