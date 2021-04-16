@@ -64,7 +64,6 @@ library
     Pandabot.Commands
     Pandabot.Database
     Pandabot.Handlers
-    Pandabot.Hotfix
     Pandabot.Orphans
     Pandabot.Schema
     Pandabot.Types

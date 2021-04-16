@@ -23,7 +23,6 @@ import qualified Polysemy.Reader      as P
 import           TextShow
 
 import           Pandabot.Database
-import           Pandabot.Hotfix
 import           Pandabot.Schema
 import           Pandabot.Types
 import           Pandabot.Util
@@ -48,7 +47,7 @@ registerEventHandlers = do
   void $ react @('CustomEvt "command-invoked" C.Context) $ \ctx -> do
     emoj <- view #reactPositiveEmoji <$> P.ask @Config
     let msg = ctx ^. #message
-    void . invoke $ HF $ CreateReaction msg msg emoj
+    void . invoke $ CreateReaction msg msg emoj
 
   void $ P.runNonDetMaybe $ react @'RawMessageReactionAddEvt $ \rinfo -> do
     Just gid <- pure (rinfo ^. #guildID)
@@ -70,15 +69,15 @@ registerEventHandlers = do
     wrole <- view #welcomeRole <$> P.ask @Config
     void . invoke $ AddGuildMemberRole (mem ^. #guildID) (mem ^. #id) wrole
 
-  void $ P.runNonDetMaybe $ react @'MessageReactionAddEvt $ \(msg, rct) -> do
+  void $ P.runNonDetMaybe $ react @'MessageReactionAddEvt $ \(msg, usr, _chan, rct) -> do
     npEmoji <- view #pointAssignEmoji <$> P.ask @Config
-    guard $ npEmoji == rct ^. #emoji
-    Just gid <- pure (rct ^. #guildID)
-    Right mem <- invoke $ GetGuildMember gid (rct ^. #userID)
+    guard $ npEmoji == rct
+    Just gid <- pure (msg ^. #guildID)
+    Right mem <- invoke $ GetGuildMember gid usr
     perms <- permissionsIn' gid mem
     guard $ perms `containsAll` administrator
     time <- P.embed getCurrentTime
-    db_ $ insert (Point (msg ^.  #id) gid (rct ^. #userID) (msg ^. #author) time)
+    db_ $ insert (Point (msg ^.  #id) gid (usr ^. #id) (msg ^. #author) time)
     points <- db $ DB.count [PointAssignedTo ==. (msg ^. #author), PointGuild ==. gid]
     Right awardMsg <- invoke
       . CreateMessage msg
@@ -86,20 +85,20 @@ registerEventHandlers = do
         msg ^. #author . to mention . strict
         <> " has been awarded a bamboo shoot for being an awesome panda!\nThey now have "
         <> showPoints points  <> " total."
-    P.atomicModify' @PointMessages $ #messages %~ Map.insert (rct ^. #userID, msg ^. #id) awardMsg
-  void $ react @'MessageReactionRemoveEvt $ \(_msg, rct) -> do
+    P.atomicModify' @PointMessages $ #messages %~ Map.insert (usr ^. #id, msg ^. #id) awardMsg
+  void $ react @'MessageReactionRemoveEvt $ \(msg, usr, _chan, rct) -> do
     pointEmoji <- view #pointAssignEmoji <$> P.ask @Config
-    when (pointEmoji == rct ^. #emoji) $ do
+    when (pointEmoji == rct) $ do
       db_ $ deleteWhere
-        [ PointMessage ==. (rct ^. #messageID)
-        , PointAssignedBy ==. (rct ^. #userID)
+        [ PointMessage ==. (msg ^. #id)
+        , PointAssignedBy ==. (usr ^. #id)
         ]
       msgs <- P.atomicGet @PointMessages
-      let mmsg = msgs ^. #messages . to (Map.lookup (rct ^. #userID, rct ^. #messageID))
+      let mmsg = msgs ^. #messages . to (Map.lookup (usr ^. #id, msg ^. #id))
       case mmsg of
         Nothing -> pure ()
-        Just msg -> do
-          void . invoke $ DeleteMessage msg msg
-          P.atomicModify' @PointMessages $ #messages %~ Map.delete (rct ^. #userID, rct ^. #messageID)
+        Just msg' -> do
+          void . invoke $ DeleteMessage msg' msg'
+          P.atomicModify' @PointMessages $ #messages %~ Map.delete (usr ^. #id, msg ^. #id)
 
 
