@@ -1,14 +1,22 @@
 module Pandabot.Types
   ( Config (..)
   , PointMessages (..)
+  , CLIOptions (..)
   ) where
 
 import           Calamity
 import           Data.Aeson
 import           Data.Generics.Labels ()
 import           Data.Map             (Map)
-import           Data.Text            (Text)
 import           GHC.Generics
+import           Options.Generic
+
+-- | CLI options
+newtype CLIOptions w = Options
+  { config :: w ::: FilePath <?> "The location of the json configuration file" <!> "bot.json"
+  } deriving Generic
+
+instance ParseRecord (CLIOptions Wrapped)
 
 -- | The application configuration
 data Config = Config

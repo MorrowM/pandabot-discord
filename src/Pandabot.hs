@@ -15,6 +15,7 @@ import qualified Data.Map                as Map
 import qualified Database.Persist.Sql    as DB
 import qualified Di
 import qualified DiPolysemy              as DiP
+import           Options.Generic
 import qualified Polysemy                as P
 import qualified Polysemy.AtomicState    as P
 import qualified Polysemy.Reader         as P
@@ -28,18 +29,18 @@ import           Pandabot.Util
 
 -- | Run the bot with a given configuration.
 runBotWith :: Config -> IO ()
-runBotWith config = Di.new $ \di ->
+runBotWith cfg = Di.new $ \di ->
   void
   . P.runFinal
   . P.embedToFinal @IO
   . DiP.runDiToIO di
   . runCacheInMemory
   . runMetricsNoop
-  . runPersistWith (config ^. #connectionString)
-  . useConstantPrefix (config ^. #commandPrefix . lazy)
-  . P.runReader config
+  . runPersistWith (cfg ^. #connectionString)
+  . useConstantPrefix (cfg ^. #commandPrefix . lazy)
+  . P.runReader cfg
   . P.atomicStateToIO (PointMessages Map.empty)
-  . runBotIO (BotToken (config ^. #botToken . lazy)) (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)
+  . runBotIO (BotToken (cfg ^. #botToken . lazy)) (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)
   . handleFailByLogging $ do
     db $ DB.runMigration migrateAll
     registerBotCommands
@@ -49,7 +50,8 @@ runBotWith config = Di.new $ \di ->
 -- from a `bot.json` file.
 main :: IO ()
 main = do
-  mconfig <- eitherDecodeFileStrict "bot.json"
+  opts <- unwrapRecord @_ @CLIOptions "Pandabot - a bot for pandas"
+  mconfig <- eitherDecodeFileStrict (opts ^. #config)
   case mconfig of
-    Left err     -> print err
-    Right config -> runBotWith config
+    Left err  -> print err
+    Right cfg -> runBotWith cfg

@@ -22,6 +22,7 @@ library
     DataKinds
     DeriveGeneric
     FlexibleContexts
+    FlexibleInstances
     GADTs
     LambdaCase
     MultiWayIf
@@ -51,6 +52,7 @@ library
     , generic-lens
     , lens
     , monad-logger
+    , optparse-generic
     , persistent
     , persistent-sqlite
     , polysemy
@@ -70,7 +72,7 @@ library
     Pandabot.Types
     Pandabot.Util
 
-executable pandabot-discord-exe
+executable pandabot
   main-is:          Main.hs
   hs-source-dirs:   app
   ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N -O2
