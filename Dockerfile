@@ -1,5 +1,6 @@
-FROM fpco/stack-build:lts-17.7
+FROM haskell:8.8.4
 WORKDIR /app
 COPY . .
-RUN stack build
-CMD ["stack", "run"]
+RUN cabal update
+RUN cabal build
+CMD ["cabal", "run"]
