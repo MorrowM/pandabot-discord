@@ -1,4 +1,5 @@
 # Pandabot
+
 This is the moderation bot for the official [Ulraf Discord server](http://battlepandas.com/discord).
 
 ## Installation
@@ -10,28 +11,33 @@ Note that there must be a `bot.json` configuration file in the working directory
 ```json
 {
   "botToken": "<token>",
-  "welcomeRole": "<snowflake>",
-  "pointAssignEmoji": "<emoji>",
-  "reactPositiveEmoji": "<emoji>",
-  "connectionString": "<filename>",
-  "commandPrefix": "<string>",
+  "welcomeRole":  "<snowflake>",
+  "pointAssignEmoji": {
+    "name": "👀"
+  },
+  "reactPositiveEmoji": {
+    "name": "PandaBot",
+    "id":  "<snowflake>"
+  },
+  "connectionString": "database.sqlite",
+  "commandPrefix": "?",
   "voiceConfig": {
     "roles": [
       {
-        "name": "<string>",
-        "role": <snowflake>,
+        "name": "SHECRET voice chat",
+        "role":  "<snowflake>",
         "voiceChannels": [
-          <snowflake>
+           "<snowflake>"
         ],
-        "textChannel": <snowflake>
+        "textChannel":  "<snowflake>"
       },
       {
-        "name": "<string>",
-        "role": <snowflake>,
+        "name": "the Bamboo Jungle",
+        "role":  "<snowflake>",
         "voiceChannels": [
-          <snowflake>
+           "<snowflake>"
         ],
-        "textChannel": <snowflake>
+        "textChannel":  "<snowflake>"
       }
     ]
   }
