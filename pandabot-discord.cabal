@@ -72,10 +72,12 @@ library
     Pandabot.Types
     Pandabot.Util
 
+  ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N
+
 executable pandabot
   main-is:          Main.hs
   hs-source-dirs:   app
-  ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N -O2
+  ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , base              >=4.7 && <5
     , pandabot-discord

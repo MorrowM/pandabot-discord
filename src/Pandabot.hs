@@ -39,7 +39,7 @@ runBotWith cfg = Di.new $ \di ->
   . runPersistWith (cfg ^. #connectionString)
   . useConstantPrefix (cfg ^. #commandPrefix . lazy)
   . P.runReader cfg
-  . P.atomicStateToIO (PointMessages Map.empty)
+  . P.atomicStateToIO (MessagePointMessages Map.empty)
   . runBotIO (BotToken (cfg ^. #botToken . lazy)) (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)
   . handleFailByLogging $ do
     db $ DB.runMigration migrateAll

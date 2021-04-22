@@ -22,6 +22,7 @@ import qualified Polysemy.NonDet      as P
 import qualified Polysemy.Reader      as P
 import           TextShow
 
+import           Pandabot.Commands
 import           Pandabot.Database
 import           Pandabot.Schema
 import           Pandabot.Types
@@ -33,7 +34,7 @@ registerEventHandlers ::
   , P.Member Persistable r
   , P.Member P.Fail r
   , P.Member (P.Reader Config) r
-  , P.Member (P.AtomicState PointMessages) r)
+  , P.Member (P.AtomicState MessagePointMessages) r)
   => P.Sem r ()
 registerEventHandlers = do
   void $ react @('CustomEvt "command-error" (C.Context, CommandError)) $ \(ctx, e) -> do
@@ -44,6 +45,7 @@ registerEventHandlers = do
           InvokeError n r -> void . tellt ctx $ "Failed to invoke command `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
         let msg = ctx ^. #message
         void . invoke $ CreateReaction msg msg (UnicodeEmoji "❌")
+
   void $ react @('CustomEvt "command-invoked" C.Context) $ \ctx -> do
     emoj <- view #reactPositiveEmoji <$> P.ask @Config
     let msg = ctx ^. #message
@@ -72,34 +74,28 @@ registerEventHandlers = do
   void $ P.runNonDetMaybe $ react @'MessageReactionAddEvt $ \(msg, usr, _chan, rct) -> do
     npEmoji <- view #pointAssignEmoji <$> P.ask @Config
     guard $ npEmoji == rct
-    Just gid <- pure (msg ^. #guildID)
-    Right mem <- invoke $ GetGuildMember gid usr
-    perms <- permissionsIn' gid mem
-    guard $ perms `containsAll` administrator
-    time <- P.embed getCurrentTime
-    db_ $ insert (Point (msg ^.  #id) gid (usr ^. #id) (msg ^. #author) time)
-    points <- db $ DB.count [PointAssignedTo ==. (msg ^. #author), PointGuild ==. gid]
-    Right awardMsg <- invoke
-      . CreateMessage msg
-      $ def & #content ?~
-        msg ^. #author . to mention . strict
-        <> " has been awarded a bamboo shoot for being an awesome panda!\nThey now have "
-        <> showPoints points  <> " total."
-    P.atomicModify' @PointMessages $ #messages %~ Map.insert (usr ^. #id, msg ^. #id) awardMsg
+    awardMessagePoint msg usr
+
   void $ react @'MessageReactionRemoveEvt $ \(msg, usr, _chan, rct) -> do
     pointEmoji <- view #pointAssignEmoji <$> P.ask @Config
     when (pointEmoji == rct) $ do
       db_ $ deleteWhere
-        [ PointMessage ==. (msg ^. #id)
-        , PointAssignedBy ==. (usr ^. #id)
+        [ MessagePointMessage ==. (msg ^. #id)
+        , MessagePointAssignedBy ==. (usr ^. #id)
         ]
-      msgs <- P.atomicGet @PointMessages
-      let mmsg = msgs ^. #messages . to (Map.lookup (usr ^. #id, msg ^. #id))
+      mmsg <- P.atomicGets @MessagePointMessages (view $ #messages . to (Map.lookup (msg ^. #id)))
       case mmsg of
         Nothing -> pure ()
-        Just msg' -> do
-          void . invoke $ DeleteMessage msg' msg'
-          P.atomicModify' @PointMessages $ #messages %~ Map.delete (usr ^. #id, msg ^. #id)
+        Just (awardMsg, 1) -> do
+          void . invoke $ DeleteMessage awardMsg awardMsg
+          P.atomicModify' @MessagePointMessages $ #messages %~ Map.delete (msg ^. #id)
+        Just (awardMsg, amnt) -> do
+          Just gid <- pure $ msg ^. #guildID
+          points <- countPoints (msg ^. #author) gid
+          void . invoke . EditMessage awardMsg awardMsg . editMessageContent . Just $
+            awardPointMessageText msg (pred amnt) points ^. strict
+          P.atomicModify' @MessagePointMessages $ #messages %~ Map.adjust (over _2 pred) (msg ^. #id)
+
   void $ react @'VoiceStateUpdateEvt $ \(mbefore, after') -> do
     cfg <- P.ask @Config
     let roleList = cfg ^. #voiceConfig . #roles
@@ -122,3 +118,35 @@ registerEventHandlers = do
           void . invoke $ CreateMessage chan
             (def & #content ?~ "**" <> (usr ^. #username . strict) <> "** left the channel")
       | otherwise -> pure ()
+
+awardMessagePoint ::
+  ( BotC r
+  , P.Member Persistable r
+  , P.Member P.NonDet r
+  , P.Member P.Fail r
+  , P.Member (P.AtomicState MessagePointMessages) r
+  ) => Message -> User -> P.Sem r ()
+awardMessagePoint msg usr = do
+  Just gid <- pure (msg ^. #guildID)
+  Right mem <- invoke $ GetGuildMember gid usr
+  perms <- permissionsIn' gid mem
+  guard $ perms `containsAll` administrator
+  time <- P.embed getCurrentTime
+  db_ $ insert (MessagePoint (msg ^.  #id) gid (usr ^. #id) (msg ^. #author) time)
+  points <- countPoints (msg ^. #author) gid
+  mawardMsg <- P.atomicGets @MessagePointMessages (view $ #messages . to (Map.lookup $ msg ^. #id))
+  case mawardMsg of
+    Nothing -> do
+      Right awardMsg <- tellt msg $
+          awardPointMessageText msg 1 points
+      P.atomicModify' @MessagePointMessages $ #messages %~ Map.insert (msg ^. #id) (awardMsg, 1)
+    Just (awardMsg, amnt) -> do
+      void . invoke . EditMessage awardMsg awardMsg . editMessageContent . Just $
+          awardPointMessageText msg (succ amnt) points ^. strict
+      P.atomicModify' @MessagePointMessages $ #messages %~ Map.adjust (over _2 succ) (msg ^. #id)
+
+awardPointMessageText :: Message -> Int -> Int -> L.Text
+awardPointMessageText msg points total =
+  msg ^. #author . to mention
+  <> " has been awarded " <> showPoints points ^. lazy <> " for being an awesome panda!\nThey now have "
+  <> showPoints total ^. lazy  <> " total."

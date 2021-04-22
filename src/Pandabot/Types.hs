@@ -1,6 +1,6 @@
 module Pandabot.Types
   ( Config (..)
-  , PointMessages (..)
+  , MessagePointMessages (..)
   , CLIOptions (..)
   ) where
 
@@ -51,6 +51,6 @@ instance ToJSON VoiceRole
 
 -- | A record of which replies have been made for which message,
 -- in order to be able to delete them when necessary.
-newtype PointMessages = PointMessages
-  { messages :: Map (Snowflake User, Snowflake Message) Message
+newtype MessagePointMessages = MessagePointMessages
+  { messages :: Map (Snowflake Message) (Message, Int)
   } deriving (Show, Eq, Generic)

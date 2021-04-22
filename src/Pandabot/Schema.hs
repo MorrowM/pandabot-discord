@@ -31,11 +31,19 @@ share
     role (Snowflake Role)
     deriving Show
 
-  Point
+  MessagePoint
     message (Snowflake Message)
     guild (Snowflake Guild)
     assignedBy (Snowflake User)
     assignedTo (Snowflake User)
     assignedAt UTCTime
+    deriving Show
+
+  FreePoint
+    guild (Snowflake Guild)
+    assignedBy (Snowflake User)
+    assignedTo (Snowflake User)
+    assignedAt UTCTime
+    amount Int
     deriving Show
 |]

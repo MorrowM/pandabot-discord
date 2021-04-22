@@ -1,6 +1,7 @@
 module Pandabot.Commands
-( registerBotCommands
-) where
+  ( registerBotCommands
+  , countPoints
+  ) where
 
 import           Calamity
 import           Calamity.Commands       as C
@@ -20,7 +21,9 @@ import qualified Polysemy                as P
 import qualified Polysemy.Fail           as P
 import           TextShow
 
+import qualified Data.Map                as Map
 import           Data.Maybe
+import           Data.Time
 import           Pandabot.Database
 import           Pandabot.Schema
 import           Pandabot.Util
@@ -51,7 +54,7 @@ registerBotCommands = void $ addCommands $ do
       db_ $ insert newButton
       invoke $ CreateReaction chan msg emoj
 
-    void $ command @'[GuildChannel, RawEmoji, Snowflake Message] "reomve" $ \ctx chan emoj msg -> void $ do
+    void $ command @'[GuildChannel, RawEmoji, Snowflake Message] "remove" $ \ctx chan emoj msg -> void $ do
       sameGuild ctx chan
       info $ "Deleting button " <> showtl (chan, emoj, msg)
       db_ $ deleteWhere [ButtonChannel ==. getID chan, ButtonMessage ==. msg, ButtonEmoji ==. showt emoj]
@@ -59,25 +62,43 @@ registerBotCommands = void $ addCommands $ do
 
   void $ help (const "How many shoots do you have?") $ command @'[Maybe User] "shoots" $ \ctx muser -> do
     Just gld <- pure (ctx ^. #guild)
-    points <- db $ DB.count [PointAssignedTo ==. maybe (ctx ^. #user . to getID) getID muser, PointGuild ==. getID gld]
+    points <- countPoints (fromMaybe (ctx ^. #user) muser) gld
     void . tellt ctx $ (fromMaybe (ctx ^. #user) muser ^. #username) <> " has " <> (showPoints points ^. lazy) <> "."
 
   void $ command @'[] "leaderboard" $ \ctx -> do
     Just gld <- pure (ctx ^. #guild)
-    pointsRaw <- db $ selectList [PointGuild ==. getID gld] [Asc PointAssignedTo]
-    let pointsList
-          = take 5
-          . L.sortOn (Down . snd)
-          . fmap (head &&& length)
-          . L.group
-          $ pointAssignedTo . entityVal <$> pointsRaw
-    points <- for pointsList $ \(u, p) -> do
+    messagePointsRaw <- db $ selectList [MessagePointGuild ==. getID gld] [Asc MessagePointAssignedTo]
+    freePointsRaw <- db $ selectList [FreePointGuild ==. getID gld] [Asc FreePointAssignedTo]
+    let messagePointsMap
+          = Map.fromListWith (+)
+          . fmap (,1)
+          $ messagePointAssignedTo . entityVal <$> messagePointsRaw
+        freePointsMap
+          = Map.fromListWith (+)
+          $ (freePointAssignedTo &&& freePointAmount) . entityVal <$> freePointsRaw
+        pointsMap = Map.unionWith (+) messagePointsMap freePointsMap
+        topFive = take 5 . L.sortOn (Down . snd) . Map.toList $ pointsMap
+    points <- for topFive $ \(u, p) -> do
       Just usr <- upgrade u
       pure (usr ^. #username . strict, p)
 
+    let txt = view lazy $ T.unlines [showt i <> ". " <> nm <> ": " <> showPoints p | (i, (nm, p)) <- zip [(1 :: Int)..] points]
     void $ if null points
       then tellt ctx "No one has any points yet!"
-      else tellt ctx $ view lazy $ T.unlines [showt i <> ". " <> nm <> ": " <> showPoints p | (i, (nm, p)) <- zip [(1 :: Int)..] points]
+      else tell @Embed ctx $ def
+        & #title ?~ "Leaderboard"
+        & #description ?~ txt
+
+  void $ requires [admin] $ help (const "Award a panda some delicious bamboo") $ command @'[Member, Named "shoots" (Maybe Int)] "award" $ \ctx mem mamnt -> do
+    time <- P.embed getCurrentTime
+    let amnt = fromMaybe 1 mamnt
+        point = FreePoint (mem ^. #guildID) (ctx ^. #user . #id) (mem ^. #id) time amnt
+    db_ $ insert point
+    points <- countPoints mem mem
+    void . tellt ctx $
+      mem ^. to mention
+      <> " has been awarded " <> (showPoints amnt ^. lazy) <> " for being an awesome panda!\nThey now have "
+      <> (showPoints points ^. lazy)  <> " total."
 
 -- | Create a `Check` for whether the user invoking the
 -- command is an administrator.
@@ -95,3 +116,15 @@ isAdmin = buildCheck "requires admin" $ \ctx -> do
 sameGuild :: (BotC r, P.Member P.Fail r) => C.Context -> GuildChannel -> P.Sem r ()
 sameGuild ctx chan = when (Just (getID @Guild chan) == (getID <$> ctx ^. #guild)) $ do
         fire $ customEvt @"command-error" (CheckError "same guild" "Cannot modify buttons in other guilds")
+
+countPoints ::
+  ( BotC r
+  , P.Member Persistable r
+  , HasID User u
+  , HasID Guild g
+  ) => u -> g -> P.Sem r Int
+countPoints usr gld = (+) <$> msgPoints <*> freePoints
+  where
+    msgPoints = db $ DB.count [MessagePointAssignedTo ==. getID usr, MessagePointGuild ==. getID gld]
+    freePoints = sum . fmap (getFreePointAmnt . entityVal) <$> db (selectList [FreePointAssignedTo ==. getID usr, FreePointGuild ==. getID gld] [])
+    getFreePointAmnt (FreePoint _ _ _ _ amnt) = amnt
