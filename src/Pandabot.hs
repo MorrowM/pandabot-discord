@@ -19,6 +19,7 @@ import           Options.Generic
 import qualified Polysemy                as P
 import qualified Polysemy.AtomicState    as P
 import qualified Polysemy.Reader         as P
+import qualified Polysemy.Time           as P
 
 import           Pandabot.Commands
 import           Pandabot.Database
@@ -39,6 +40,7 @@ runBotWith cfg = Di.new $ \di ->
   . runPersistWith (cfg ^. #connectionString)
   . useConstantPrefix (cfg ^. #commandPrefix . lazy)
   . P.runReader cfg
+  . P.interpretTimeGhc
   . P.atomicStateToIO (MessagePointMessages Map.empty)
   . runBotIO (BotToken (cfg ^. #botToken . lazy)) (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)
   . handleFailByLogging $ do

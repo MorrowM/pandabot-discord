@@ -12,6 +12,8 @@ import           Control.Monad
 import           Data.Default
 import           Data.Flags
 import qualified Data.List               as L
+import qualified Data.Map                as Map
+import           Data.Maybe
 import           Data.Ord
 import           Data.Text               (Text, pack)
 import qualified Data.Text               as T
@@ -19,11 +21,9 @@ import           Data.Traversable
 import           Database.Persist        as DB
 import qualified Polysemy                as P
 import qualified Polysemy.Fail           as P
+import qualified Polysemy.Time           as P
 import           TextShow
 
-import qualified Data.Map                as Map
-import           Data.Maybe
-import           Data.Time
 import           Pandabot.Database
 import           Pandabot.Schema
 import           Pandabot.Util
@@ -31,9 +31,12 @@ import           Pandabot.Util
 -- | Register all the bot commands
 registerBotCommands ::
   ( BotC r
-  , P.Member ParsePrefix r
-  , P.Member Persistable r
-  , P.Member P.Fail r
+  , P.Members
+    [ ParsePrefix
+    , Persistable
+    , P.Fail
+    , P.GhcTime
+    ] r
   ) => P.Sem r ()
 registerBotCommands = void $ addCommands $ do
   admin <- isAdmin
@@ -90,7 +93,7 @@ registerBotCommands = void $ addCommands $ do
         & #description ?~ txt
 
   void $ requires [admin] $ help (const "Award a panda some delicious bamboo") $ command @'[Member, Named "shoots" (Maybe Int)] "award" $ \ctx mem mamnt -> do
-    time <- P.embed getCurrentTime
+    time <- P.now
     let amnt = fromMaybe 1 mamnt
         point = FreePoint (mem ^. #guildID) (ctx ^. #user . #id) (mem ^. #id) time amnt
     db_ $ insert point
@@ -104,7 +107,6 @@ registerBotCommands = void $ addCommands $ do
 -- command is an administrator.
 isAdmin :: BotC r => P.Sem r Check
 isAdmin = buildCheck "requires admin" $ \ctx -> do
-  P.embed $ print ctx
   case ctx ^. #member of
     Nothing -> pure $ Just "This command can only be run in a server"
     Just mem -> do

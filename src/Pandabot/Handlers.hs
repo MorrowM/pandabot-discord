@@ -12,7 +12,6 @@ import           Data.Flags
 import           Data.Foldable
 import qualified Data.Map             as Map
 import qualified Data.Text.Lazy       as L
-import           Data.Time
 import qualified Data.Vector.Unboxing as V
 import           Database.Persist     as DB
 import qualified Polysemy             as P
@@ -20,6 +19,7 @@ import qualified Polysemy.AtomicState as P
 import qualified Polysemy.Fail        as P
 import qualified Polysemy.NonDet      as P
 import qualified Polysemy.Reader      as P
+import qualified Polysemy.Time        as P
 import           TextShow
 
 import           Pandabot.Commands
@@ -31,10 +31,13 @@ import           Pandabot.Util
 -- | Register the various event handlers for the bot.
 registerEventHandlers ::
   ( BotC r
-  , P.Member Persistable r
-  , P.Member P.Fail r
-  , P.Member (P.Reader Config) r
-  , P.Member (P.AtomicState MessagePointMessages) r)
+  , P.Members
+    [ Persistable
+    , P.Fail
+    , P.Reader Config
+    , P.AtomicState MessagePointMessages
+    , P.GhcTime
+    ] r )
   => P.Sem r ()
 registerEventHandlers = do
   void $ react @('CustomEvt "command-error" (C.Context, CommandError)) $ \(ctx, e) -> do
@@ -121,17 +124,20 @@ registerEventHandlers = do
 
 awardMessagePoint ::
   ( BotC r
-  , P.Member Persistable r
-  , P.Member P.NonDet r
-  , P.Member P.Fail r
-  , P.Member (P.AtomicState MessagePointMessages) r
+  , P.Members
+    [ Persistable
+    , P.NonDet
+    , P.Fail
+    , P.AtomicState MessagePointMessages
+    , P.GhcTime
+    ] r
   ) => Message -> User -> P.Sem r ()
 awardMessagePoint msg usr = do
   Just gid <- pure (msg ^. #guildID)
   Right mem <- invoke $ GetGuildMember gid usr
   perms <- permissionsIn' gid mem
   guard $ perms `containsAll` administrator
-  time <- P.embed getCurrentTime
+  time <- P.now
   db_ $ insert (MessagePoint (msg ^.  #id) gid (usr ^. #id) (msg ^. #author) time)
   points <- countPoints (msg ^. #author) gid
   mawardMsg <- P.atomicGets @MessagePointMessages (view $ #messages . to (Map.lookup $ msg ^. #id))
