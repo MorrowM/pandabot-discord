@@ -50,7 +50,7 @@ registerEventHandlers = do
         void . invoke $ CreateReaction msg msg (UnicodeEmoji "❌")
 
   void $ react @('CustomEvt "command-invoked" C.Context) $ \ctx -> do
-    emoj <- view #reactPositiveEmoji <$> P.ask @Config
+    emoj <- P.asks @Config $ view #reactPositiveEmoji
     let msg = ctx ^. #message
     void . invoke $ CreateReaction msg msg emoj
 
@@ -71,16 +71,16 @@ registerEventHandlers = do
 
   void $ react @'GuildMemberAddEvt $ \mem -> do
     info $ "User " <> (mem ^. #username) <> " joined guild " <> (mem ^. #guildID . to showt . lazy)
-    wrole <- view #welcomeRole <$> P.ask @Config
+    wrole <- P.asks @Config $ view #welcomeRole
     void . invoke $ AddGuildMemberRole (mem ^. #guildID) (mem ^. #id) wrole
 
   void $ P.runNonDetMaybe $ react @'MessageReactionAddEvt $ \(msg, usr, _chan, rct) -> do
-    npEmoji <- view #pointAssignEmoji <$> P.ask @Config
+    npEmoji <- P.asks @Config $ view #pointAssignEmoji
     guard $ npEmoji == rct
     awardMessagePoint msg usr
 
   void $ react @'MessageReactionRemoveEvt $ \(msg, usr, _chan, rct) -> do
-    pointEmoji <- view #pointAssignEmoji <$> P.ask @Config
+    pointEmoji <- P.asks @Config $ view #pointAssignEmoji
     when (pointEmoji == rct) $ do
       db_ $ deleteWhere
         [ MessagePointMessage ==. (msg ^. #id)
@@ -100,8 +100,7 @@ registerEventHandlers = do
           P.atomicModify' @MessagePointMessages $ #messages %~ Map.adjust (over _2 pred) (msg ^. #id)
 
   void $ react @'VoiceStateUpdateEvt $ \(mbefore, after') -> do
-    cfg <- P.ask @Config
-    let roleList = cfg ^. #voiceConfig . #roles
+    roleList <- P.asks @Config . view $ #voiceConfig . #roles
     Just gid <- pure $ after' ^. #guildID
     for_ roleList $ \r -> if
       | (mbefore >>= view #channelID) `notElem` fmap Just (r ^. #voiceChannels)
