@@ -13,7 +13,7 @@ import           Options.Generic
 
 -- | CLI options
 newtype CLIOptions w = Options
-  { config :: w ::: FilePath <?> "The location of the json configuration file" <!> "bot.json"
+  { config :: w ::: Maybe FilePath <?> "The path to the configuration file (must end with .json/.yaml)"
   } deriving Generic
 
 instance ParseRecord (CLIOptions Wrapped)

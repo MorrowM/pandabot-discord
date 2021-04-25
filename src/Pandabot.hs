@@ -9,9 +9,11 @@ import           Calamity.Commands
 import           Calamity.Metrics.Noop
 import           Control.Lens
 import           Control.Monad
-import           Data.Aeson
+import qualified Data.Aeson              as Aeson
 import           Data.Flags
+import           Data.List
 import qualified Data.Map                as Map
+import qualified Data.Yaml               as Yaml
 import qualified Database.Persist.Sql    as DB
 import qualified Di
 import qualified DiPolysemy              as DiP
@@ -20,6 +22,8 @@ import qualified Polysemy                as P
 import qualified Polysemy.AtomicState    as P
 import qualified Polysemy.Reader         as P
 import qualified Polysemy.Time           as P
+import           System.Directory
+import           System.Exit
 
 import           Pandabot.Commands
 import           Pandabot.Database
@@ -53,7 +57,20 @@ runBotWith cfg = Di.new $ \di ->
 main :: IO ()
 main = do
   opts <- unwrapRecord @_ @CLIOptions "Pandabot - a bot for pandas"
-  mconfig <- eitherDecodeFileStrict (opts ^. #config)
-  case mconfig of
-    Left err  -> print err
-    Right cfg -> runBotWith cfg
+  path <- case opts ^. #config of
+    Just path -> pure path
+    Nothing -> do
+      ifM (doesFileExist "bot.json") ("bot.json" <$ putStrLn "using bot.json...") $
+        ifM (doesFileExist "bot.yaml") ("bot.yaml" <$ putStrLn "using bot.yaml...") $
+          die "error: cannot find configuration file"
+  cfg <-
+    if "yaml" `isSuffixOf` path
+    then Yaml.decodeFileThrow path
+    else if "json" `isSuffixOf` path
+    then Aeson.eitherDecodeFileStrict path >>= either die pure
+    else die "error: unrecoognized file extension (must be either json or yaml)"
+  runBotWith cfg
+  where
+    ifM mb x y = do
+      b <- mb
+      if b then x else y

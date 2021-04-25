@@ -49,6 +49,7 @@ library
     , data-flags
     , di
     , di-polysemy
+    , directory
     , generic-lens
     , lens
     , monad-logger
@@ -62,6 +63,7 @@ library
     , text-show
     , time
     , unboxing-vector
+    , yaml
 
   default-language:   Haskell2010
   exposed-modules:
@@ -74,7 +76,7 @@ library
     Pandabot.Types
     Pandabot.Util
 
-  ghc-options: -fplugin=Polysemy.Plugin
+  ghc-options:        -fplugin=Polysemy.Plugin
 
 executable pandabot
   main-is:          Main.hs
