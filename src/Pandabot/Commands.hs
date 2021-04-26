@@ -41,8 +41,10 @@ registerBotCommands ::
 registerBotCommands = void $ addCommands $ do
   admin <- isAdmin
   void helpCommand
-  requires [admin] $ group "button" $ do
-    void $ command @'[GuildChannel, RawEmoji, Role, Text] "add" $ \ctx chan emoj role txt -> void $ do
+  requires [admin] $ help (const "Manage role buttons")
+    $ group "button" $ do
+    void $ help (const "Create a role button")
+      $ command @'[GuildChannel, RawEmoji, Role, Text] "add" $ \ctx chan emoj role txt -> void $ do
       sameGuild ctx chan
       Right msg <- invoke $ CreateMessage chan (def & #content ?~ txt)
       let newButton = Button (getID chan) (getID msg) (pack $ show emoj) (getID role)
@@ -50,25 +52,29 @@ registerBotCommands = void $ addCommands $ do
       db_ $ insert newButton
       invoke $ CreateReaction chan msg emoj
 
-    void $ command @'[GuildChannel, RawEmoji, Role, Snowflake Message] "insert" $ \ctx chan emoj role msg -> void $ do
+    void $ help (const "Insert a role button into an existing message")
+      $ command @'[GuildChannel, RawEmoji, Role, Snowflake Message] "insert" $ \ctx chan emoj role msg -> void $ do
       sameGuild ctx chan
       let newButton = Button (getID chan) msg (pack $ show emoj) (getID role)
       info $ "Inserting button " <> showtl (FromStringShow newButton)
       db_ $ insert newButton
       invoke $ CreateReaction chan msg emoj
 
-    void $ command @'[GuildChannel, RawEmoji, Snowflake Message] "remove" $ \ctx chan emoj msg -> void $ do
+    void $ help (const "Remove a role button")
+      $ command @'[GuildChannel, RawEmoji, Snowflake Message] "remove" $ \ctx chan emoj msg -> void $ do
       sameGuild ctx chan
       info $ "Deleting button " <> showtl (chan, emoj, msg)
       db_ $ deleteWhere [ButtonChannel ==. getID chan, ButtonMessage ==. msg, ButtonEmoji ==. showt emoj]
       invoke $ DeleteOwnReaction chan msg emoj
 
-  void $ help (const "How many shoots do you have?") $ command @'[Maybe User] "shoots" $ \ctx muser -> do
+  void $ help (const "How many shoots do you have?")
+    $ command @'[Maybe User] "shoots" $ \ctx muser -> do
     Just gld <- pure (ctx ^. #guild)
     points <- countPoints (fromMaybe (ctx ^. #user) muser) gld
     void . tellt ctx $ (fromMaybe (ctx ^. #user) muser ^. #username) <> " has " <> (showPoints points ^. lazy) <> "."
 
-  void $ command @'[] "leaderboard" $ \ctx -> do
+  void $ help (const "See all the awesomest pandas")
+    $ command @'[] "leaderboard" $ \ctx -> do
     Just gld <- pure (ctx ^. #guild)
     messagePointsRaw <- db $ selectList [MessagePointGuild ==. getID gld] [Asc MessagePointAssignedTo]
     freePointsRaw <- db $ selectList [FreePointGuild ==. getID gld] [Asc FreePointAssignedTo]
@@ -92,7 +98,8 @@ registerBotCommands = void $ addCommands $ do
         & #title ?~ "Leaderboard"
         & #description ?~ txt
 
-  void $ requires [admin] $ help (const "Award a panda some delicious bamboo") $ command @'[Member, Named "shoots" (Maybe Int)] "award" $ \ctx mem mamnt -> do
+  void $ requires [admin] $ help (const "Award a panda some delicious bamboo")
+    $ command @'[Member, Named "shoots" (Maybe Int)] "award" $ \ctx mem mamnt -> do
     time <- P.now
     let amnt = fromMaybe 1 mamnt
         point = FreePoint (mem ^. #guildID) (ctx ^. #user . #id) (mem ^. #id) time amnt
