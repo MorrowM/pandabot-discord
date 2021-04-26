@@ -1,11 +1,7 @@
 cradle:
-  stack:
-    - path: "./src"
-      component: "pandabot-discord:lib"
+  cabal:
+    - path: "src"
+      component: "lib:pandabot-discord"
 
-    - path: "./app/Main.hs"
+    - path: "app/Main.hs"
       component: "pandabot-discord:exe:pandabot-discord-exe"
-
-    - path: "./test"
-      component: "pandabot-discord:test:pandabot-discord-test"
-    - path: "./.stack-work"
