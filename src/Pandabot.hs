@@ -13,9 +13,12 @@ import qualified Data.Aeson              as Aeson
 import           Data.Flags
 import           Data.List
 import qualified Data.Map                as Map
+import qualified Data.Sequence           as Seq
 import qualified Data.Yaml               as Yaml
 import qualified Database.Persist.Sql    as DB
+import qualified Df1
 import qualified Di
+import qualified Di.Core
 import qualified DiPolysemy              as DiP
 import           Options.Generic
 import qualified Polysemy                as P
@@ -39,6 +42,7 @@ runBotWith cfg = Di.new $ \di ->
   . P.runFinal
   . P.embedToFinal @IO
   . DiP.runDiToIO di
+  . DiP.local filterShard
   . runCacheInMemory
   . runMetricsNoop
   . runPersistWith (cfg ^. #connectionString)
@@ -74,3 +78,9 @@ main = do
     ifM mb x y = do
       b <- mb
       if b then x else y
+
+filterShard :: Di.Core.Di level Di.Path msg -> Di.Core.Di level Di.Path msg
+filterShard = Di.Core.filter $ \_ path _ ->
+  path /= shard
+  where
+    shard = Seq.fromList [Df1.Push "calamity", Df1.Push "calamity-shard", Df1.Attr "shard-id" "0"]

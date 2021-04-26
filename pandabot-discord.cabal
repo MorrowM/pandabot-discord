@@ -47,7 +47,9 @@ library
     , containers
     , data-default
     , data-flags
+    , df1
     , di
+    , di-core
     , di-polysemy
     , directory
     , generic-lens
