@@ -6,25 +6,27 @@ module Pandabot
 import           Calamity
 import           Calamity.Cache.InMemory
 import           Calamity.Commands
+import           Calamity.Gateway
 import           Calamity.Metrics.Noop
+import           Calamity.Types.Model.Presence.Activity as Activity
 import           Control.Lens
 import           Control.Monad
-import qualified Data.Aeson              as Aeson
+import qualified Data.Aeson                             as Aeson
 import           Data.Flags
 import           Data.List
-import qualified Data.Map                as Map
-import qualified Data.Sequence           as Seq
-import qualified Data.Yaml               as Yaml
-import qualified Database.Persist.Sql    as DB
+import qualified Data.Map                               as Map
+import qualified Data.Sequence                          as Seq
+import qualified Data.Yaml                              as Yaml
+import qualified Database.Persist.Sql                   as DB
 import qualified Df1
 import qualified Di
 import qualified Di.Core
-import qualified DiPolysemy              as DiP
+import qualified DiPolysemy                             as DiP
 import           Options.Generic
-import qualified Polysemy                as P
-import qualified Polysemy.AtomicState    as P
-import qualified Polysemy.Reader         as P
-import qualified Polysemy.Time           as P
+import qualified Polysemy                               as P
+import qualified Polysemy.AtomicState                   as P
+import qualified Polysemy.Reader                        as P
+import qualified Polysemy.Time                          as P
 import           System.Directory
 import           System.Exit
 
@@ -50,7 +52,10 @@ runBotWith cfg = Di.new $ \di ->
   . P.runReader cfg
   . P.interpretTimeGhc
   . P.atomicStateToIO (MessagePointMessages Map.empty)
-  . runBotIO (BotToken (cfg ^. #botToken . lazy)) (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)
+  . runBotIO'
+    (BotToken (cfg ^. #botToken . lazy))
+    (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)
+    (Just (StatusUpdateData Nothing (Just botActivity) "!grian" False))
   . handleFailByLogging $ do
     db $ DB.runMigration migrateAll
     registerBotCommands
@@ -81,6 +86,9 @@ main = do
 
 filterShard :: Di.Core.Di level Di.Path msg -> Di.Core.Di level Di.Path msg
 filterShard = Di.Core.filter $ \_ path _ ->
-  path /= shard
+  path /= shardPath
   where
-    shard = Seq.fromList [Df1.Push "calamity", Df1.Push "calamity-shard", Df1.Attr "shard-id" "0"]
+    shardPath = Seq.fromList [Df1.Push "calamity", Df1.Push "calamity-shard", Df1.Attr "shard-id" "0"]
+
+botActivity :: Activity
+botActivity = Activity.activity "Minecraft" Game
