@@ -1,27 +1,29 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 module Pandabot.Handlers
 ( registerEventHandlers
 ) where
 
 import           Calamity
 import           Calamity.Cache.Eff
-import           Calamity.Commands    as C
+import           Calamity.Commands         as C
 import           Control.Lens
 import           Control.Monad
 import           Data.Default
 import           Data.Flags
 import           Data.Foldable
-import qualified Data.Map             as Map
-import qualified Data.Text.Lazy       as L
-import qualified Data.Vector.Unboxing as V
-import           Database.Persist     as DB
-import qualified Polysemy             as P
-import qualified Polysemy.AtomicState as P
-import qualified Polysemy.Fail        as P
-import qualified Polysemy.NonDet      as P
-import qualified Polysemy.Reader      as P
-import qualified Polysemy.Time        as P
+import qualified Data.Map                  as Map
+import qualified Data.Text.Lazy            as L
+import qualified Data.Vector.Unboxing      as V
+import           Database.Persist          as DB
+import qualified Polysemy                  as P
+import qualified Polysemy.AtomicState      as P
+import qualified Polysemy.Fail             as P
+import qualified Polysemy.NonDet           as P
+import qualified Polysemy.Reader           as P
+import qualified Polysemy.Time             as P
 import           TextShow
 
+import           Calamity.Commands.Context (FullContext)
 import           Pandabot.Commands
 import           Pandabot.Database
 import           Pandabot.Schema
@@ -40,7 +42,7 @@ registerEventHandlers ::
     ] r )
   => P.Sem r ()
 registerEventHandlers = do
-  void $ react @('CustomEvt "command-error" (C.Context, CommandError)) $ \(ctx, e) -> do
+  void $ react @('CustomEvt (CtxCommandError FullContext)) $ \(CtxCommandError ctx e) -> do
         info $ "Command failed with reason: " <> showtl e
         case e of
           ParseError n r -> void . tellt ctx $ "Failed to parse parameter: `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
@@ -49,7 +51,7 @@ registerEventHandlers = do
         let msg = ctx ^. #message
         void . invoke $ CreateReaction msg msg (UnicodeEmoji "❌")
 
-  void $ react @('CustomEvt "command-invoked" C.Context) $ \ctx -> do
+  void $ react @('CustomEvt (CommandInvoked FullContext)) $ \(CommandInvoked ctx) -> do
     emoj <- P.asks @Config $ view #reactPositiveEmoji
     let msg = ctx ^. #message
     void . invoke $ CreateReaction msg msg emoj
