@@ -1,6 +1,6 @@
 cabal-version:      2.2
 name:               pandabot-discord
-version:            0.2
+version:            0.2.1
 description:
   Please see the README on GitHub at <https://github.com/MorrowM/pandabot-discord#readme>
 
@@ -42,7 +42,7 @@ library
   build-depends:
     , aeson
     , base               >=4.7      && <5
-    , calamity           >=0.1.28.2
+    , calamity           ==0.1.29.0
     , conduit
     , containers
     , data-default

@@ -118,7 +118,7 @@ isAdmin = buildCheck "requires admin" $ \ctx -> do
     Nothing -> pure $ Just "This command can only be run in a server"
     Just mem -> do
       perms <- permissionsIn' (mem ^. #guildID) mem
-      pure $ if andFlags perms administrator `containsAll` administrator
+      pure $ if perms `containsAll` administrator
         then Nothing
         else Just "User must be an administrator"
 

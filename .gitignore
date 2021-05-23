@@ -7,3 +7,4 @@ bot.json
 bot.yaml
 dist-newstyle/
 .vscode/
+*.prof

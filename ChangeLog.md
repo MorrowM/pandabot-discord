@@ -1,6 +1,9 @@
 # Changelog for pandabot-discord
 
-## Unreleased changes
+## 0.2.1
+- Fix an issue with admin permissions
+
+## 0.2
 
 - Use a json configuration file `bot.json` instead of `bot.cfg`.
 - Notifpoints are now called "points" in the code and "bamboo shoots" in the 
