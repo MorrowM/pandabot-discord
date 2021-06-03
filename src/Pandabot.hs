@@ -5,7 +5,8 @@ module Pandabot
 
 import           Calamity
 import           Calamity.Cache.InMemory
-import           Calamity.Commands
+import           Calamity.Commands                      hiding (path)
+import           Calamity.Commands.Context
 import           Calamity.Gateway
 import           Calamity.Metrics.Noop
 import           Calamity.Types.Model.Presence.Activity as Activity
@@ -49,6 +50,7 @@ runBotWith cfg = Di.new $ \di ->
   . runMetricsNoop
   . runPersistWith (cfg ^. #connectionString)
   . useConstantPrefix (cfg ^. #commandPrefix . lazy)
+  . useFullContext
   . P.runReader cfg
   . P.interpretTimeGhc
   . P.atomicStateToIO (MessagePointMessages Map.empty)

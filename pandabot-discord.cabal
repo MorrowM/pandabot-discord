@@ -1,23 +1,34 @@
 cabal-version:      2.2
 name:               pandabot-discord
 version:            0.2.1
+license:            BSD-3-Clause
+license-file:       LICENSE
+copyright:          2021 Morrow
+maintainer:         example@example.com
+author:             Morrow
+homepage:           https://github.com/MorrowM/pandabot-discord#readme
+bug-reports:        https://github.com/MorrowM/pandabot-discord/issues
 description:
   Please see the README on GitHub at <https://github.com/MorrowM/pandabot-discord#readme>
 
-homepage:           https://github.com/MorrowM/pandabot-discord#readme
-bug-reports:        https://github.com/MorrowM/pandabot-discord/issues
-author:             Morrow
-maintainer:         example@example.com
-copyright:          2021 Morrow
-license:            BSD-3-Clause
-license-file:       LICENSE
 build-type:         Simple
 extra-source-files:
   ChangeLog.md
   README.md
 
 library
+  exposed-modules:
+    Pandabot
+    Pandabot.Commands
+    Pandabot.Database
+    Pandabot.Handlers
+    Pandabot.Orphans
+    Pandabot.Schema
+    Pandabot.Types
+    Pandabot.Util
+
   hs-source-dirs:     src
+  default-language:   Haskell2010
   default-extensions:
     DataKinds
     DeriveGeneric
@@ -38,54 +49,41 @@ library
     TypeOperators
     ViewPatterns
 
-  ghc-options:        -Wall
+  ghc-options:        -Wall -fplugin=Polysemy.Plugin
   build-depends:
-    , aeson
+    , aeson              ^>=1.5.6.0
     , base               >=4.7      && <5
-    , calamity           ==0.1.29.0
-    , conduit
-    , containers
-    , data-default
-    , data-flags
-    , df1
-    , di
-    , di-core
-    , di-polysemy
-    , directory
-    , generic-lens
-    , lens
-    , monad-logger
-    , optparse-generic
-    , persistent
-    , persistent-sqlite
-    , polysemy
-    , polysemy-plugin
-    , polysemy-time
-    , text
-    , text-show
-    , time
-    , unboxing-vector
-    , yaml
-
-  default-language:   Haskell2010
-  exposed-modules:
-    Pandabot
-    Pandabot.Commands
-    Pandabot.Database
-    Pandabot.Handlers
-    Pandabot.Orphans
-    Pandabot.Schema
-    Pandabot.Types
-    Pandabot.Util
-
-  ghc-options:        -fplugin=Polysemy.Plugin
+    , calamity           ==0.1.30.2
+    , calamity-commands  ==0.1.3.0
+    , conduit            ^>=1.3.4.1
+    , containers         ^>=0.6.2.1
+    , data-default       ^>=0.7.1.1
+    , data-flags         ^>=0.0.3.4
+    , df1                ^>=0.4
+    , di                 ^>=1.3
+    , di-core            ^>=1.0.4
+    , di-polysemy        ^>=0.2.0.0
+    , directory          ^>=1.3.6.0
+    , generic-lens       ^>=2.1.0.0
+    , lens               ^>=5.0.1
+    , monad-logger       ^>=0.3.36
+    , optparse-generic   ^>=1.4.4
+    , persistent         ^>=2.13.0.1
+    , persistent-sqlite  ^>=2.13.0.0
+    , polysemy           ^>=1.5.0.0
+    , polysemy-plugin    ^>=0.3.0.0
+    , polysemy-time      ^>=0.1.2.1
+    , text               ^>=1.2.4.1
+    , text-show          ^>=3.9
+    , time               ^>=1.9.3
+    , unboxing-vector    ^>=0.2.0.0
+    , yaml               ^>=0.11.5.0
 
 executable pandabot
   main-is:          Main.hs
   hs-source-dirs:   app
+  default-language: Haskell2010
   ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , base              >=4.7 && <5
     , pandabot-discord
-
-  default-language: Haskell2010
