@@ -7,9 +7,8 @@ module Pandabot.Commands
 import           Calamity
 import           Calamity.Commands
 import           Calamity.Commands.Context (FullContext)
-import           Calamity.Commands.Types
-import           CalamityCommands          (ParsePrefix)
-import qualified CalamityCommands.Context  as C
+import           CalamityCommands          (ConstructContext, ParsePrefix)
+import           CalamityCommands.Check    (buildCheck)
 import           Control.Arrow
 import           Control.Lens
 import           Control.Monad
@@ -28,7 +27,6 @@ import qualified Polysemy.Fail             as P
 import qualified Polysemy.Time             as P
 import           TextShow
 
-import           CalamityCommands.Check    (buildCheck)
 import           Pandabot.Database
 import           Pandabot.Schema
 import           Pandabot.Util
@@ -41,7 +39,7 @@ registerBotCommands ::
     , Persistable
     , P.Fail
     , P.GhcTime
-    , C.ConstructContext Message FullContext IO ()
+    , ConstructContext Message FullContext IO ()
     ] r
   ) => P.Sem r ()
 registerBotCommands = void $ addCommands $ do

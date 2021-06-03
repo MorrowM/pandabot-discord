@@ -5,9 +5,8 @@ module Pandabot
 
 import           Calamity
 import           Calamity.Cache.InMemory
-import           Calamity.Commands
+import           Calamity.Commands                      hiding (path)
 import           Calamity.Commands.Context
-import           Calamity.Commands.Utils                (useConstantPrefix)
 import           Calamity.Gateway
 import           Calamity.Metrics.Noop
 import           Calamity.Types.Model.Presence.Activity as Activity
