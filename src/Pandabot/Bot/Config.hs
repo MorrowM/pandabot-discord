@@ -1,13 +1,11 @@
-module Pandabot.Types
+module Pandabot.Bot.Config
   ( Config (..)
-  , MessagePointMessages (..)
   , CLIOptions (..)
   ) where
 
 import           Calamity
 import           Data.Aeson
 import           Data.Generics.Labels ()
-import           Data.Map             (Map)
 import           GHC.Generics
 import           Options.Generic
 
@@ -48,9 +46,3 @@ data VoiceRole = VoiceRole
 
 instance FromJSON VoiceRole
 instance ToJSON VoiceRole
-
--- | A record of which replies have been made for which message,
--- in order to be able to delete them when necessary.
-newtype MessagePointMessages = MessagePointMessages
-  { messages :: Map (Snowflake Message) (Message, Int)
-  } deriving (Show, Eq, Generic)

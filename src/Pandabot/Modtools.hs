@@ -21,7 +21,7 @@ registerLockdownCommand ::
   ) => Check c -> P.Sem (DSLState c r) ()
 registerLockdownCommand admin = void
   $ requires [admin]
-  $ help (const "Server lockdown")
+  $ help (const "Toggle server lockdown")
   $ command @'[] "lockdown" $ \_ctx -> do
     toggleLockdown
 

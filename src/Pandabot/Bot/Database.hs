@@ -1,4 +1,4 @@
-module Pandabot.Database
+module Pandabot.Bot.Database
   ( Persistable (..)
   , db
   , db_

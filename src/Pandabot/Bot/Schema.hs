@@ -12,14 +12,13 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
-
-module Pandabot.Schema where
+module Pandabot.Bot.Schema where
 
 import           Calamity
-import           Data.Text           (Text)
+import           Data.Text            (Text)
 import           Data.Time
 import           Database.Persist.TH
-import           Pandabot.Orphans    ()
+import           Pandabot.Bot.Orphans ()
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]

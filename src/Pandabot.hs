@@ -31,13 +31,14 @@ import qualified Polysemy.Time                          as P
 import           System.Directory
 import           System.Exit
 
-import           Pandabot.Commands
-import           Pandabot.Database
-import           Pandabot.Handlers
+import           Pandabot.Bot.Commands
+import           Pandabot.Bot.Config
+import           Pandabot.Bot.Database
+import           Pandabot.Bot.Handlers
+import           Pandabot.Bot.Schema
+import           Pandabot.Bot.Util
 import           Pandabot.Modtools
-import           Pandabot.Schema
-import           Pandabot.Types
-import           Pandabot.Util
+import           Pandabot.Points
 
 -- | Run the bot with a given configuration.
 runBotWith :: Config -> IO ()

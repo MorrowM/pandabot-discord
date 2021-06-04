@@ -1,4 +1,4 @@
-module Pandabot.Commands.Utils where
+module Pandabot.Bot.Commands.Utils where
 
 import           Calamity
 import           Calamity.Commands
