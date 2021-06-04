@@ -34,6 +34,7 @@ import           System.Exit
 import           Pandabot.Commands
 import           Pandabot.Database
 import           Pandabot.Handlers
+import           Pandabot.Modtools
 import           Pandabot.Schema
 import           Pandabot.Types
 import           Pandabot.Util
@@ -54,6 +55,7 @@ runBotWith cfg = Di.new $ \di ->
   . P.runReader cfg
   . P.interpretTimeGhc
   . P.atomicStateToIO (MessagePointMessages Map.empty)
+  . P.atomicStateToIO Unlocked
   . runBotIO'
     (BotToken (cfg ^. #botToken . lazy))
     (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)

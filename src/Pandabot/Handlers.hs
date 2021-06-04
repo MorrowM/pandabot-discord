@@ -6,6 +6,7 @@ module Pandabot.Handlers
 import           Calamity
 import           Calamity.Cache.Eff
 import           Calamity.Commands         as C
+import           Calamity.Commands.Context (FullContext)
 import           Control.Lens
 import           Control.Monad
 import           Data.Default
@@ -23,9 +24,9 @@ import qualified Polysemy.Reader           as P
 import qualified Polysemy.Time             as P
 import           TextShow
 
-import           Calamity.Commands.Context (FullContext)
 import           Pandabot.Commands
 import           Pandabot.Database
+import           Pandabot.Modtools
 import           Pandabot.Schema
 import           Pandabot.Types
 import           Pandabot.Util
@@ -39,6 +40,7 @@ registerEventHandlers ::
     , P.Reader Config
     , P.AtomicState MessagePointMessages
     , P.GhcTime
+    , P.AtomicState LockdownState
     ] r )
   => P.Sem r ()
 registerEventHandlers = do
@@ -73,8 +75,10 @@ registerEventHandlers = do
 
   void $ react @'GuildMemberAddEvt $ \mem -> do
     info $ "User " <> (mem ^. #username) <> " joined guild " <> (mem ^. #guildID . to showt . lazy)
-    wrole <- P.asks @Config $ view #welcomeRole
-    void . invoke $ AddGuildMemberRole (mem ^. #guildID) (mem ^. #id) wrole
+    ldState <- P.atomicGet @LockdownState
+    when (ldState == Unlocked) $ do
+      wrole <- P.asks @Config $ view #welcomeRole
+      void . invoke $ AddGuildMemberRole (mem ^. #guildID) (mem ^. #id) wrole
 
   void $ P.runNonDetMaybe $ react @'MessageReactionAddEvt $ \(msg, usr, _chan, rct) -> do
     npEmoji <- P.asks @Config $ view #pointAssignEmoji
