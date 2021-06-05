@@ -12,7 +12,7 @@ main = hspec $ do
       in and (zipWith (/=) allVals (toggleLockdownPure <$> allVals))
 
   describe "toggleLockdown" $
-    it "does applies toggleLockdownPure" $
+    it "uses toggleLockdownPure" $
       inplaceMatchesPure Locked <> inplaceMatchesPure Unlocked
 
 
