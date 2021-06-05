@@ -16,25 +16,7 @@ extra-source-files:
   ChangeLog.md
   README.md
 
-library
-  exposed-modules:
-    Pandabot
-    Pandabot.Bot.Commands
-    Pandabot.Bot.Commands.Utils
-    Pandabot.Bot.Config
-    Pandabot.Bot.Database
-    Pandabot.Bot.Handlers
-    Pandabot.Bot.Orphans
-    Pandabot.Bot.Schema
-    Pandabot.Bot.Util
-    Pandabot.Buttons
-    Pandabot.Modtools
-    Pandabot.PandaRole
-    Pandabot.Points
-    Pandabot.VoiceLog
-
-  hs-source-dirs:     src
-  default-language:   Haskell2010
+common extensions
   default-extensions:
     DataKinds
     DeriveGeneric
@@ -55,7 +37,27 @@ library
     TypeOperators
     ViewPatterns
 
-  ghc-options:        -Wall -Wno-name-shadowing -fplugin=Polysemy.Plugin
+library
+  import:           extensions
+  exposed-modules:
+    Pandabot
+    Pandabot.Bot.Commands
+    Pandabot.Bot.Commands.Utils
+    Pandabot.Bot.Config
+    Pandabot.Bot.Database
+    Pandabot.Bot.Handlers
+    Pandabot.Bot.Orphans
+    Pandabot.Bot.Schema
+    Pandabot.Bot.Util
+    Pandabot.Buttons
+    Pandabot.Modtools
+    Pandabot.PandaRole
+    Pandabot.Points
+    Pandabot.VoiceLog
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall -Wno-name-shadowing -fplugin=Polysemy.Plugin
   build-depends:
     , aeson              ^>=1.5.6.0
     , base               >=4.7      && <5
@@ -93,3 +95,24 @@ executable pandabot
   build-depends:
     , base              >=4.7 && <5
     , pandabot-discord
+
+test-suite spec
+  import:           extensions
+  type:             exitcode-stdio-1.0
+  main-is:          Spec.hs
+  hs-source-dirs:   test
+  ghc-options:      -Wall
+  build-depends:
+    , aeson
+    , base
+    , calamity
+    , generic-lens
+    , hspec
+    , hspec-discover
+    , lens
+    , pandabot-discord
+    , polysemy
+    , text
+    , yaml
+
+  default-language: Haskell2010

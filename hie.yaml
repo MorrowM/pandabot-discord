@@ -4,4 +4,7 @@ cradle:
       component: "lib:pandabot-discord"
 
     - path: "app/Main.hs"
-      component: "pandabot-discord:exe:pandabot-discord-exe"
+      component: "pandabot-discord:exe:pandabot"
+
+    - path: "test"
+      component: "pandabot-discord:test:spec"

@@ -8,3 +8,4 @@ bot.yaml
 dist-newstyle/
 .vscode/
 *.prof
+cabal.project.local
