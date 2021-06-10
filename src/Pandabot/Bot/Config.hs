@@ -26,16 +26,12 @@ data Config = Config
   , connectionString   :: Text
   , voiceConfig        :: VoiceConfig
   } deriving (Show, Eq, Generic)
-
-instance FromJSON Config
-instance ToJSON Config
+    deriving anyclass (FromJSON, ToJSON)
 
 newtype VoiceConfig = VoiceConfig
   { roles :: [VoiceRole]
   } deriving (Show, Eq, Generic)
-
-instance FromJSON VoiceConfig
-instance ToJSON VoiceConfig
+    deriving anyclass (FromJSON, ToJSON)
 
 data VoiceRole = VoiceRole
   { name          :: Text
@@ -43,6 +39,4 @@ data VoiceRole = VoiceRole
   , voiceChannels :: [Snowflake VoiceChannel]
   , textChannel   :: Maybe (Snowflake TextChannel)
   } deriving (Show, Eq, Generic)
-
-instance FromJSON VoiceRole
-instance ToJSON VoiceRole
+    deriving anyclass (FromJSON, ToJSON)
