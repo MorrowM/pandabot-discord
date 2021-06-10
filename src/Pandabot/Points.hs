@@ -101,7 +101,7 @@ registerLeaderboardCommand ::
     ] r
   ) => P.Sem (DSLState FullContext r) ()
 registerLeaderboardCommand = void $ help (const "See all the awesomest pandas")
-    $ command @'[] "leaderboard" $ \ctx -> do
+    $ commandA @'[] "leaderboard" ["lb"] $ \ctx -> do
     Just gld <- pure (ctx ^. #guild)
     messagePointsRaw <- db $ selectList [MessagePointGuild ==. getID gld] [Asc MessagePointAssignedTo]
     freePointsRaw <- db $ selectList [FreePointGuild ==. getID gld] [Asc FreePointAssignedTo]
