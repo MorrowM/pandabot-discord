@@ -19,7 +19,10 @@ extra-source-files:
 common extensions
   default-extensions:
     DataKinds
+    DeriveAnyClass
     DeriveGeneric
+    DerivingStrategies
+    DerivingVia
     FlexibleContexts
     FlexibleInstances
     GADTs

@@ -19,6 +19,5 @@ main = hspec $ do
 inplaceMatchesPure :: LockdownState -> Expectation
 inplaceMatchesPure st = P.run $ P.evalState st $ P.atomicStateToState @LockdownState $ do
   bef <- P.get @LockdownState
-  toggleLockdown
-  aft <- P.get @LockdownState
+  aft <- toggleLockdown
   pure $ aft `shouldBe` toggleLockdownPure bef
