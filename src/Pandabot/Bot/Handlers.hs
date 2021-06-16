@@ -63,6 +63,7 @@ registerCommandResponseHandler = do
     void . invoke $ CreateReaction msg msg (UnicodeEmoji "❌")
 
   void $ react @('CustomEvt (CommandInvoked FullContext)) $ \(CommandInvoked ctx) -> do
+    info $ "Command invoked by " <> ctx ^. #user . #username <> ":\n" <> ctx ^. #message . #content
     emoj <- P.asks @Config $ view #reactPositiveEmoji
     let msg = ctx ^. #message
     void . invoke $ CreateReaction msg msg emoj

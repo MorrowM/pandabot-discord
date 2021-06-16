@@ -54,6 +54,7 @@ library
     Pandabot.Bot.Schema
     Pandabot.Bot.Util
     Pandabot.Buttons
+    Pandabot.Help
     Pandabot.Modtools
     Pandabot.PandaRole
     Pandabot.Points
@@ -61,35 +62,39 @@ library
 
   hs-source-dirs:   src
   default-language: Haskell2010
-  ghc-options:      -Wall -Wno-name-shadowing -fplugin=Polysemy.Plugin
+  ghc-options:
+    -Wall -Wno-name-shadowing -Wno-partial-type-signatures
+    -fplugin=Polysemy.Plugin
+
   build-depends:
-    , aeson              ^>=1.5.6.0
-    , base               >=4.7      && <5
-    , calamity           ==0.1.30.2
-    , calamity-commands  ==0.1.3.0
-    , conduit            ^>=1.3.4.1
-    , containers         ^>=0.6.2.1
-    , data-default       ^>=0.7.1.1
-    , data-flags         ^>=0.0.3.4
-    , df1                ^>=0.4
-    , di                 ^>=1.3
-    , di-core            ^>=1.0.4
-    , di-polysemy        ^>=0.2.0.0
-    , directory          ^>=1.3.6.0
-    , generic-lens       ^>=2.1.0.0
-    , lens               ^>=5.0.1
-    , monad-logger       ^>=0.3.36
-    , optparse-generic   ^>=1.4.4
-    , persistent         ^>=2.13.0.1
-    , persistent-sqlite  ^>=2.13.0.0
-    , polysemy           ^>=1.5.0.0
-    , polysemy-plugin    ^>=0.3.0.0
-    , polysemy-time      ^>=0.1.2.1
-    , text               ^>=1.2.4.1
-    , text-show          ^>=3.9
-    , time               ^>=1.9.3
-    , unboxing-vector    ^>=0.2.0.0
-    , yaml               ^>=0.11.5.0
+    , aeson                 ^>=1.5.6.0
+    , base                  >=4.7      && <5
+    , calamity              ==0.1.30.2
+    , calamity-commands     ==0.1.3.0
+    , conduit               ^>=1.3.4.1
+    , containers            ^>=0.6.2.1
+    , data-default          ^>=0.7.1.1
+    , data-flags            ^>=0.0.3.4
+    , df1                   ^>=0.4
+    , di                    ^>=1.3
+    , di-core               ^>=1.0.4
+    , di-polysemy           ^>=0.2.0.0
+    , directory             ^>=1.3.6.0
+    , generic-lens          ^>=2.1.0.0
+    , lens                  ^>=5.0.1
+    , monad-logger          ^>=0.3.36
+    , optparse-generic      ^>=1.4.4
+    , persistent            ^>=2.13.0.1
+    , persistent-sqlite     ^>=2.13.0.0
+    , polysemy              ^>=1.5.0.0
+    , polysemy-plugin       ^>=0.3.0.0
+    , polysemy-time         ^>=0.1.2.1
+    , text                  ^>=1.2.4.1
+    , text-show             ^>=3.9
+    , time                  ^>=1.9.3
+    , unboxing-vector       ^>=0.2.0.0
+    , unordered-containers
+    , yaml                  ^>=0.11.5.0
 
 executable pandabot
   main-is:          Main.hs

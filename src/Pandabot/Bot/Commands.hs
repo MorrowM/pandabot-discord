@@ -16,6 +16,7 @@ import qualified Polysemy.Time               as P
 import           Pandabot.Bot.Commands.Utils
 import           Pandabot.Bot.Database
 import           Pandabot.Buttons
+import           Pandabot.Help
 import           Pandabot.Modtools
 import           Pandabot.Points
 
@@ -33,7 +34,8 @@ registerBotCommands ::
   ) => P.Sem r ()
 registerBotCommands = void $ addCommands $ do
   admin <- isAdmin
-  void helpCommand
+  void customHelpCommand
+  void $ requires [admin] adminHelpCommand
 
   registerButtonCommands admin
 

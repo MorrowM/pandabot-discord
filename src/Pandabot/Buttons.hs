@@ -29,7 +29,7 @@ registerButtonCommands ::
    '[ Persistable
     ] r
   ) => Check FullContext -> P.Sem (DSLState FullContext r) ()
-registerButtonCommands admin = requires [admin] $ help (const "Manage role buttons")
+registerButtonCommands admin = requires [admin] $ help (const "Manage buttons.") $ hide
     $ group "button" $ do
     void $ help (const "Create a role button")
       $ command @'[GuildChannel, RawEmoji, Role, Text] "add" $ \ctx chan emoj role txt -> void $ do

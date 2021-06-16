@@ -27,7 +27,8 @@ registerLockdownCommand ::
   ) => Check FullContext -> P.Sem (DSLState FullContext r) ()
 registerLockdownCommand admin = void
   $ requires [admin]
-  $ help (const "Toggle server lockdown")
+  $ help (const "Temporarily disables members from getting the @Pandas role.")
+  $ hide
   $ command @'[] "lockdown" $ \ctx -> do
     ldState <- toggleLockdown
     void $ reply @Text (ctx ^. #message) $ "Lockdown state: " <> showt ldState

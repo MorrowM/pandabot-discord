@@ -70,17 +70,19 @@ registerAwardCommand ::
     , P.GhcTime
     ] r
   ) => Check FullContext -> P.Sem (DSLState FullContext r) ()
-registerAwardCommand admin = void $ requires [admin] $ help (const "Award a panda some delicious bamboo")
-    $ command @'[Member, Named "shoots" (Maybe Int)] "award" $ \ctx mem mamnt -> do
+registerAwardCommand admin = void $ requires [admin] $ help (const "Award bamboo shoots to pandas.") $ hide
+    $ command @'[Member, Named "shoots" (Maybe Int), L.Text] "award" $ \ctx mem mamnt reason -> do
     time <- P.now
     let amnt = fromMaybe 1 mamnt
         point = FreePoint (mem ^. #guildID) (ctx ^. #user . #id) (mem ^. #id) time amnt
     db_ $ DB.insert point
     points <- countPoints mem mem
+    void . invoke $ DeleteMessage (ctx ^. #message) (ctx ^. #message)
     void . tellt ctx $
       mem ^. to mention
-      <> " has been awarded " <> (showPoints amnt ^. lazy) <> " for being an awesome panda!\nThey now have "
+      <> " has been awarded " <> (showPoints amnt ^. lazy) <> "! " <> reason <> "\nThey now have "
       <> (showPoints points ^. lazy)  <> " total."
+
 
 registerShootsCommand ::
   ( BotC r
@@ -88,7 +90,7 @@ registerShootsCommand ::
    '[ Persistable
     ] r
   ) => P.Sem (DSLState FullContext r) ()
-registerShootsCommand = void $ help (const "How many shoots do you have?")
+registerShootsCommand = void $ help (const "Shows how many bamboo shoots you have in total.")
     $ command @'[Maybe User] "shoots" $ \ctx muser -> do
     Just gld <- pure (ctx ^. #guild)
     points <- countPoints (fromMaybe (ctx ^. #user) muser) gld
@@ -100,7 +102,7 @@ registerLeaderboardCommand ::
    '[ Persistable
     ] r
   ) => P.Sem (DSLState FullContext r) ()
-registerLeaderboardCommand = void $ help (const "See all the awesomest pandas")
+registerLeaderboardCommand = void $ help (const "Shows the top bamboo shoot pandas.")
     $ commandA @'[] "leaderboard" ["lb"] $ \ctx -> do
     Just gld <- pure (ctx ^. #guild)
     messagePointsRaw <- db $ selectList [MessagePointGuild ==. getID gld] [Asc MessagePointAssignedTo]
