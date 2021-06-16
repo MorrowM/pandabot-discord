@@ -28,8 +28,9 @@ data Config = Config
   } deriving (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
-newtype VoiceConfig = VoiceConfig
-  { roles :: [VoiceRole]
+data VoiceConfig = VoiceConfig
+  { roles              :: [VoiceRole]
+  , messageDeleteDelay :: Maybe Int
   } deriving (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
 

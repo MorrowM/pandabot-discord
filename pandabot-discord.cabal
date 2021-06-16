@@ -28,6 +28,7 @@ common extensions
     GADTs
     LambdaCase
     MultiWayIf
+    NumericUnderscores
     OverloadedLabels
     OverloadedStrings
     PartialTypeSignatures
