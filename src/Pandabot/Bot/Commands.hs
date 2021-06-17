@@ -13,6 +13,8 @@ import qualified Polysemy.AtomicState        as P
 import qualified Polysemy.Fail               as P
 import qualified Polysemy.Time               as P
 
+import           Control.Lens
+import           Data.Text                   (Text)
 import           Pandabot.Bot.Commands.Utils
 import           Pandabot.Bot.Database
 import           Pandabot.Buttons
@@ -46,3 +48,6 @@ registerBotCommands = void $ addCommands $ do
   registerLockdownCommand admin
 
 
+  command @'[] "grain" $ \ctx -> do
+    void . invoke $ CreateReaction (ctx ^. #channel) (ctx ^. #message) (UnicodeEmoji "❌")
+    void $ reply @Text (ctx ^. #message) "Error: Command `grain` not found! Did you mean `grian`?"
