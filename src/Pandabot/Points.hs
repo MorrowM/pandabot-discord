@@ -71,7 +71,7 @@ registerAwardCommand ::
     ] r
   ) => Check FullContext -> P.Sem (DSLState FullContext r) ()
 registerAwardCommand admin = void $ requires [admin] $ help (const "Award bamboo shoots to pandas.") $ hide
-    $ command @'[Member, Named "shoots" (Maybe Int), L.Text] "award" $ \ctx mem mamnt reason -> do
+    $ command @'[Member, Named "shoots" (Maybe Int), KleenePlusConcat L.Text] "award" $ \ctx mem mamnt reason -> do
     time <- P.now
     let amnt = fromMaybe 1 mamnt
         point = FreePoint (mem ^. #guildID) (ctx ^. #user . #id) (mem ^. #id) time amnt
