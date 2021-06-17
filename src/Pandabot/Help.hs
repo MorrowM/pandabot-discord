@@ -180,7 +180,7 @@ renderHelp isAdmin handler ctx path =
 
 
 aboutHelp :: L.Text
-aboutHelp = "\nUse !help <command> to get more information about a specific command."
+aboutHelp = "\nUse `help <command>` to get more information about a specific command."
 
 {- | Given a 'CommandHandler', optionally a parent 'Group', and a list of 'Check's,
  construct a help command that will provide help for all the commands and
