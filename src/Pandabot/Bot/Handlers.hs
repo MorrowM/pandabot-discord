@@ -22,6 +22,7 @@ import           Pandabot.Buttons
 import           Pandabot.Modtools
 import           Pandabot.PandaRole
 import           Pandabot.Points
+import           Pandabot.RestrictGuilds
 import           Pandabot.VoiceLog
 
 -- | Register the various event handlers for the bot.
@@ -43,6 +44,7 @@ registerEventHandlers = do
   registerPandaRoleGiveHandler
   registerPointGiveHandler
   registerPointRevokeHandler
+  registerLeaveUnallowedGuilds
 
 registerCommandResponseHandler ::
   ( BotC r

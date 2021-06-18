@@ -58,6 +58,7 @@ library
     Pandabot.Modtools
     Pandabot.PandaRole
     Pandabot.Points
+    Pandabot.RestrictGuilds
     Pandabot.VoiceLog
 
   hs-source-dirs:   src

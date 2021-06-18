@@ -24,6 +24,7 @@ data Config = Config
   , reactPositiveEmoji :: RawEmoji
   , commandPrefix      :: Text
   , connectionString   :: Text
+  , allowedGuilds      :: Maybe [Snowflake Guild]
   , voiceConfig        :: VoiceConfig
   } deriving (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
