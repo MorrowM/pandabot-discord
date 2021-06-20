@@ -8,4 +8,7 @@ bot.yaml
 dist-newstyle/
 .vscode/
 *.prof
+*.eventlog
+*.eventlog.html
+*.hp
 cabal.project.local
