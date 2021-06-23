@@ -57,6 +57,7 @@ library
     Pandabot.Help
     Pandabot.Modtools
     Pandabot.PandaRole
+    Pandabot.PlayerDB
     Pandabot.Points
     Pandabot.RestrictGuilds
     Pandabot.VoiceLog
@@ -81,8 +82,10 @@ library
     , di-core               ^>=1.0.4
     , di-polysemy           ^>=0.2.0.0
     , directory             ^>=1.3.6.0
+    , esqueleto
     , generic-lens          ^>=2.1.0.0
     , lens                  ^>=5.0.1
+    , megaparsec
     , monad-logger          ^>=0.3.36
     , optparse-generic      ^>=1.4.4
     , persistent            ^>=2.13.0.1

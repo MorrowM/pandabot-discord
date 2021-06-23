@@ -120,7 +120,7 @@ helpForGroup isAdmin ctx grp =
     <> "\n"
     <> groupsMsg
     <> commandsMsg
-    <> aboutHelp
+    <> aboutHelp ctx
  where
   groups = filter (\g -> isAdmin || notHiddenG g) . onlyOriginals . LH.elems $ grp ^. #children
   commands = filter (\c -> isAdmin || notHiddenC c)  . onlyOriginals . LH.elems $ grp ^. #commands
@@ -145,8 +145,8 @@ helpForGroup isAdmin ctx grp =
       then ""
       else "Checks: " <> L.unwords checks' <> "\n\n"
 
-rootHelp :: Bool -> c -> CommandHandler m c a -> L.Text
-rootHelp isAdmin ctx handler = "Commands:\n" <> groupsMsg <> commandsMsg <> adminHelp <> aboutHelp
+rootHelp :: CommandContext m c a => Bool -> c -> CommandHandler m c a -> L.Text
+rootHelp isAdmin ctx handler = "Commands:\n" <> groupsMsg <> commandsMsg <> adminHelp <> aboutHelp ctx
  where
   groups = partitionVisibleG isAdmin . onlyOriginals . LH.elems $ handler ^. #groups
   commands = partitionVisibleC isAdmin . onlyOriginals . LH.elems $ handler ^. #commands
@@ -179,8 +179,10 @@ renderHelp isAdmin handler ctx path =
        in failedMsg <> rootHelp isAdmin ctx handler
 
 
-aboutHelp :: L.Text
-aboutHelp = "\nUse `help <command>` to get more information about a specific command."
+aboutHelp :: CommandContext m c a => c -> L.Text
+aboutHelp ctx = "\nUse `" <> prefix' <> "help <command>` to get more information about a specific command."
+  where
+    prefix' = ctxPrefix ctx
 
 {- | Given a 'CommandHandler', optionally a parent 'Group', and a list of 'Check's,
  construct a help command that will provide help for all the commands and
@@ -261,9 +263,11 @@ helpCommand ::
   P.Sem (DSLState m c a r) (Command m c a)
 helpCommand isAdmin name render = do
   handler <- P.ask @(CommandHandler m c a)
+  let grianComm = Command ("grian" :| []) Nothing False [] [] (const "Shows you the one and only timezone.") (const undefined) (const undefined)
+      handler' = handler & #commands %~ LH.insert "grian" (grianComm, Original)
   parent <- P.ask @(Maybe (Group m c a))
   checks <- P.ask @[Check m c]
-  cmd <- raiseDSL $ helpCommand' isAdmin name handler parent checks render
+  cmd <- raiseDSL $ helpCommand' isAdmin name handler' parent checks render
   ltell $ LH.singleton name (cmd, Original)
   pure cmd
 

@@ -7,19 +7,21 @@ import           Calamity
 import           Calamity.Commands
 import           Calamity.Commands.Context   (FullContext)
 import           CalamityCommands            (ConstructContext, ParsePrefix)
+import           Control.Lens
 import           Control.Monad
+import           Data.Text                   (Text)
 import qualified Polysemy                    as P
 import qualified Polysemy.AtomicState        as P
 import qualified Polysemy.Fail               as P
 import qualified Polysemy.Time               as P
 
-import           Control.Lens
-import           Data.Text                   (Text)
+
 import           Pandabot.Bot.Commands.Utils
 import           Pandabot.Bot.Database
 import           Pandabot.Buttons
 import           Pandabot.Help
 import           Pandabot.Modtools
+import           Pandabot.PlayerDB
 import           Pandabot.Points
 
 -- | Register all the bot commands
@@ -47,7 +49,10 @@ registerBotCommands = void $ addCommands $ do
 
   registerLockdownCommand admin
 
+  registerPlayerCommands admin
 
-  command @'[] "grain" $ \ctx -> do
+  hide
+    $ help (const "<:Wheat:857132853249966081>")
+    $ command @'[] "grain" $ \ctx -> do
     void . invoke $ CreateReaction (ctx ^. #channel) (ctx ^. #message) (UnicodeEmoji "❌")
     void $ reply @Text (ctx ^. #message) "Error: Command `grain` not found! Did you mean `grian`?"
