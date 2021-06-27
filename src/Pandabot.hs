@@ -38,6 +38,7 @@ import           Pandabot.Bot.Handlers
 import           Pandabot.Bot.Schema
 import           Pandabot.Bot.Util
 import           Pandabot.Modtools
+import           Pandabot.PlayerDB.Whitelist
 import           Pandabot.Points
 
 -- | Run the bot with a given configuration.
@@ -53,6 +54,7 @@ runBotWith cfg = Di.new $ \di ->
   . runPersistWith (cfg ^. #connectionString)
   . useConstantPrefix (cfg ^. #commandPrefix . lazy)
   . useFullContext
+  . runReqInIO
   . P.runReader cfg
   . P.interpretTimeGhc
   . P.atomicStateToIO (MessagePointMessages Map.empty)

@@ -48,7 +48,7 @@ import           Pandabot.Bot.Util
 -- in order to be able to delete them when necessary.
 newtype MessagePointMessages = MessagePointMessages
   { messages :: Map (Snowflake Message) (Message, Int)
-  } deriving (Show, Eq, Generic)
+  } deriving (Show, Generic)
 
 countPoints ::
   ( BotC r
@@ -74,10 +74,10 @@ registerAwardCommand admin = void $ requires [admin] $ help (const "Award bamboo
     $ command @'[Member, Named "shoots" (Maybe Int), KleenePlusConcat L.Text] "award" $ \ctx mem mamnt reason -> do
     time <- P.now
     let amnt = fromMaybe 1 mamnt
-        point = FreePoint (mem ^. #guildID) (ctx ^. #user . #id) (mem ^. #id) time amnt
+        point = FreePoint (mem ^. #guildID) (getID ctx) (mem ^. #id) time amnt
     db_ $ DB.insert point
     points <- countPoints mem mem
-    void . invoke $ DeleteMessage (ctx ^. #message) (ctx ^. #message)
+    void . invoke $ DeleteMessage ctx ctx
     void . tellt ctx $
       mem ^. to mention
       <> " has been awarded " <> (showPoints amnt ^. lazy) <> "! " <> reason <> "\nThey now have "

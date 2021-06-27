@@ -15,10 +15,13 @@
 {-# LANGUAGE UndecidableInstances       #-}
 module Pandabot.Bot.Schema where
 
+import           Pandabot.Bot.Orphans           ()
+
 import           Calamity
 import           Calamity.Commands
 import           CalamityCommands.ParameterInfo
 import           Control.Applicative
+import           Data.Aeson
 import           Data.Maybe
 import           Data.Text                      (Text)
 import qualified Data.Text                      as S
@@ -27,8 +30,9 @@ import           Database.Persist
 import           Database.Persist.Sql
 import           Database.Persist.TH
 import           GHC.Generics                   (Generic)
-import           Pandabot.Bot.Orphans           ()
 import           Text.Megaparsec.Char
+import           TextShow
+import           TextShow.Generic
 
 newtype PersistFieldEnum a = PersistFieldEnum a
   deriving newtype (Eq, Ord, Bounded, Enum)
@@ -71,6 +75,13 @@ instance ParameterParser CommunityMemberStatus c r where
     <|> (Banned <$ string "banned")
     )
 
+newtype UUID = UUID
+  { getUUID :: Text
+  }
+  deriving (Eq, Ord, Show, Generic)
+  deriving newtype (ToJSON, FromJSON, PersistFieldSql, PersistField)
+  deriving TextShow via (FromGeneric UUID)
+
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
   [persistLowerCase|
@@ -110,6 +121,7 @@ share
     memberID CommunityMemberId OnDeleteCascade OnUpdateCascade
     nameType NameType
     name Text
+    uuid UUID Maybe
 
     UniqueNameTypeName nameType name
 

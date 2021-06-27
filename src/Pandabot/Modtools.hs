@@ -8,7 +8,6 @@ module Pandabot.Modtools
 import           Calamity
 import           Calamity.Commands
 import           Calamity.Commands.Context (FullContext)
-import           Control.Lens
 import           Control.Monad
 import           Data.Text                 (Text)
 import           GHC.Generics
@@ -31,7 +30,7 @@ registerLockdownCommand admin = void
   $ hide
   $ command @'[] "lockdown" $ \ctx -> do
     ldState <- toggleLockdown
-    void $ reply @Text (ctx ^. #message) $ "Lockdown state: " <> showt ldState
+    void $ reply @Text ctx $ "Lockdown state: " <> showt ldState
 
 toggleLockdownPure :: LockdownState -> LockdownState
 toggleLockdownPure Locked   = Unlocked

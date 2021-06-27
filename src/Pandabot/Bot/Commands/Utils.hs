@@ -25,3 +25,4 @@ isAdmin = buildCheck "Requires Admin" $ \ctx -> do
 sameGuild :: (BotC r, P.Member P.Fail r) => FullContext -> GuildChannel -> P.Sem r ()
 sameGuild ctx chan = when (Just (getID @Guild chan) == (getID <$> ctx ^. #guild)) $ do
         fire $ customEvt (CtxCommandError ctx $ CheckError "same guild" "Cannot modify buttons in other guilds")
+        fail "Cannot modify buttons in other guilds"

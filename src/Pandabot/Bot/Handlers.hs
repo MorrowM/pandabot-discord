@@ -61,11 +61,9 @@ registerCommandResponseHandler = do
       ParseError n r -> void . tellt ctx $ "Failed to parse parameter: `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
       CheckError n r -> void . tellt ctx $ "Failed to pass a check: `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
       InvokeError n r -> void . tellt ctx $ "Failed to invoke command `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
-    let msg = ctx ^. #message
-    void . invoke $ CreateReaction msg msg (UnicodeEmoji "❌")
+    void . invoke $ CreateReaction ctx ctx (UnicodeEmoji "❌")
 
   void $ react @('CustomEvt (CommandInvoked FullContext)) $ \(CommandInvoked ctx) -> do
     info $ "Command invoked by " <> ctx ^. #user . #username <> ":\n" <> ctx ^. #message . #content
     emoj <- P.asks @Config $ view #reactPositiveEmoji
-    let msg = ctx ^. #message
-    void . invoke $ CreateReaction msg msg emoj
+    void . invoke $ CreateReaction ctx ctx emoj

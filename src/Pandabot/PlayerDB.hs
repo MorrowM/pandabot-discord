@@ -9,24 +9,31 @@ import           Pandabot.Bot.Util
 import           Calamity
 import           Calamity.Commands
 import           Calamity.Commands.Context       (FullContext)
-import           Control.Lens                    ((&), (.~), (?~))
+import           Control.Lens                    (mapped, (%~), (&), (.~), (?~))
 import           Control.Monad
+import           Data.Aeson.Encode.Pretty
+import           Data.ByteString.Lazy            (ByteString)
 import           Data.Default
 import           Data.Int
 import           Data.Map.Strict                 (Map)
 import qualified Data.Map.Strict                 as Map
+import           Data.Maybe
 import           Data.Text                       (Text)
+import qualified Data.Text                       as T
 import qualified Data.Text.Lazy                  as L
 import           Data.Time
 import           Data.Time.Format.ISO8601
 import           Data.Traversable
 import           Database.Esqueleto.Experimental (BackendKey (unSqlBackendKey),
-                                                  Entity (Entity), from, insert,
-                                                  like, select, table, val,
-                                                  where_, (%), (++.), (==.))
+                                                  Entity (Entity), from,
+                                                  innerJoin, insert, like,
+                                                  select, table,
+                                                  type (:&) ((:&)), val, where_,
+                                                  (%), (++.), (==.))
 import qualified Database.Esqueleto.Experimental as E
 import qualified Database.Persist                as P
 import           GHC.Generics                    (Generic)
+import           Pandabot.PlayerDB.Whitelist
 import qualified Polysemy                        as P
 import           Polysemy.Time
 import           TextShow
@@ -38,22 +45,27 @@ createEmptyCommunityMember = do
   createdAt <- now
   db $ insert $ CommunityMember StandardMember createdAt
 
-createCommunityMember :: P.Members '[Persistable, GhcTime] r
+createCommunityMember :: P.Members '[Persistable, GhcTime, Req] r
   => NameType -> Text -> P.Sem r (Key MemberName, Key CommunityMember)
 createCommunityMember nametype name = do
   memid <- createEmptyCommunityMember
-  fmap (,memid) $ db $ insert (MemberName memid nametype name)
+  uuid <- case nametype of
+    MinecraftJavaName -> Just <$>  fetchUUIDByName name
+    _                 -> pure Nothing
+  fmap (,memid) $ db $ insert (MemberName memid nametype name uuid)
 
-linkMemberNames :: P.Members '[Persistable, GhcTime] r
+linkMemberNames :: P.Members '[Persistable, GhcTime, Req] r
   => NameType -> Text -> NameType -> Text -> P.Sem r (Maybe (Key CommunityMember))
 linkMemberNames nametype name nametype' name' = do
   mexisting <- db $ P.getBy $ UniqueNameTypeName nametype name
   memid <- case mexisting of
         Nothing       -> do
           snd <$> createCommunityMember nametype name
-        Just (Entity _ (MemberName memid _ _)) -> pure memid
-
-  res <- db $ P.insertUnique (MemberName memid nametype' name')
+        Just (Entity _ (MemberName memid _ _ _)) -> pure memid
+  uuid <- case nametype' of
+    MinecraftJavaName -> Just <$>  fetchUUIDByName name'
+    _                 -> pure Nothing
+  res <- db $ P.insertUnique (MemberName memid nametype' name' uuid)
   pure $ memid <$ res
 
 searchCommunityMember :: P.Member Persistable r
@@ -65,7 +77,7 @@ searchCommunityMember nametype name = do
     where_ (memname E.^. MemberNameNameType ==. val nametype)
     pure memname
 
-  for res $ \(Entity _ (MemberName memid _ _)) -> db $ do
+  for res $ \(Entity _ (MemberName memid _ _ _)) -> db $ do
     searchres <- map P.entityVal <$> P.selectList [MemberNameMemberID P.==. memid] [P.Asc MemberNameNameType]
     Just mem <- P.get memid
     pure (Entity memid mem, searchres)
@@ -94,7 +106,7 @@ removeCommunityMemberName nametype name = do
   mexisting <- db $ P.getBy $ UniqueNameTypeName nametype name
   case mexisting of
     Nothing                                -> pure Nothing
-    Just (Entity _ (MemberName memid _ _)) -> do
+    Just (Entity _ (MemberName memid _ _ _)) -> do
       db $ P.deleteBy $ UniqueNameTypeName nametype name
       getCommunityMemberById memid
 
@@ -130,31 +142,53 @@ setCommunityMemberStatus nametype name status = do
   mmemid <- db $ P.getBy $ UniqueNameTypeName nametype name
   case mmemid of
     Nothing -> pure Nothing
-    Just (Entity _ (MemberName memid _ _))  -> do
+    Just (Entity _ (MemberName memid _ _ _))  -> do
       db $ P.update memid [CommunityMemberStatus P.=. status]
       pure $ Just memid
 
-addMemberNameById :: P.Member Persistable r
+addMemberNameById :: P.Members '[Persistable, Req] r
   => CommunityMemberId -> NameType -> Text -> P.Sem r (Maybe MemberNameId)
 addMemberNameById memid nametype name = do
   mmem <- db $ P.get memid
+  uuid <- case nametype of
+    MinecraftJavaName -> Just <$>  fetchUUIDByName name
+    _                 -> pure Nothing
   case mmem of
     Nothing -> pure Nothing
-    Just _  -> fmap Just $ db $ insert $ MemberName memid nametype name
+    Just _  -> fmap Just $ db $ insert $ MemberName memid nametype name uuid
 
-updateMemberName :: P.Member Persistable r
+updateMemberName :: P.Members '[Persistable, Req] r
   => NameType -> Text -> Text -> P.Sem r (Maybe (Key CommunityMember))
 updateMemberName nametype name name' = do
   mexisting <- db $ P.getBy $ UniqueNameTypeName nametype name
   case mexisting of
     Nothing -> pure Nothing
-    Just (Entity nameid (MemberName memid _ _)) -> do
-      db $ P.update nameid [MemberNameName P.=. name']
+    Just (Entity nameid (MemberName memid _ _ _)) -> do
+      uuid <- case nametype of
+        MinecraftJavaName -> Just <$>  fetchUUIDByName name'
+        _                 -> pure Nothing
+      db $ P.update nameid [MemberNameName P.=. name', MemberNameUuid P.=. uuid]
       pure $ Just memid
+
+generateWhitelist :: P.Members '[Persistable, Req] r
+  => P.Sem r ByteString
+generateWhitelist = do
+  mns <- db $ select $ do
+    (cms :& mns) <-
+      from $ table @CommunityMember
+      `innerJoin` table @MemberName
+      `E.on` (\(cm :& mn) ->
+              cm E.^. CommunityMemberId ==. mn E.^. MemberNameMemberID)
+    where_ (cms E.^. CommunityMemberStatus  E.==. val Whitelisted)
+    where_ (mns E.^. MemberNameNameType  E.==. val MinecraftJavaName)
+    pure mns
+  let uuids = [uuid | (Entity _ (MemberName _ _ _ (Just uuid))) <- mns]
+  encodePretty . (#getWhitelist . mapped . #uuid %~ fmtUUID)  <$> fetchWhitelist uuids
+
 
 registerPlayerCommands ::
   ( BotC r
-  , P.Members '[Persistable, GhcTime] r
+  , P.Members '[Persistable, GhcTime, Req] r
   ) => Check FullContext -> P.Sem (DSLState FullContext r) ()
 registerPlayerCommands admin
   = requires [admin]
@@ -270,6 +304,13 @@ registerPlayerCommands admin
             & #embed ?~ uncurry ppMemberGetResult mem
             )
 
+    void
+      $ help (const "Generate a whitelist.")
+      $ command @'[] "whitelist" $ \ctx -> do
+        wl <- generateWhitelist
+        invoke_ $ CreateMessage ctx $ def
+          & #file ?~ ("whitelist.json", wl)
+
 ppMemberGetResult :: Entity CommunityMember -> [MemberName] -> Embed
 ppMemberGetResult (Entity memid (CommunityMember status createdAt)) ty = def
       & #title ?~ "Member Lookup Result • Id " <> showtl (memid2int memid)
@@ -308,7 +349,7 @@ ppGeneralSearchResults :: [MemberName] -> Embed
 ppGeneralSearchResults names = def
   & #title ?~ "Search Results"
   & #footer ?~ embedFooter (fmtResultCount (length names))
-  & #fields .~ [embedField (ppType nametype) (L.fromStrict name) | (MemberName _ nametype name) <- take 10 names]
+  & #fields .~ [embedField (ppType nametype) (L.fromStrict name) | (MemberName _ nametype name _) <- take 10 names]
 
 memid2int :: Key CommunityMember -> Int64
 memid2int = unSqlBackendKey . unCommunityMemberKey
@@ -326,7 +367,11 @@ ppMemberName = fmt . ppMemberNamePair
   where fmt (a, b) = a <> ": " <> b
 
 ppMemberNamePair :: MemberName -> (L.Text, L.Text)
-ppMemberNamePair (MemberName _ ty name) = (ppType ty,  L.fromStrict name)
+ppMemberNamePair (MemberName _ ty (L.fromStrict -> name) uuid) = (ppType ty, name')
+  where
+    name' = case ty of
+      MinecraftJavaName -> name <> " {" <> L.fromStrict (getUUID $ fromJust uuid) <> "}"
+      _                 -> name
 
 ppType :: NameType -> L.Text
 ppType TwitchName           = "Twitch"
@@ -336,3 +381,12 @@ ppType MinecraftBedrockName = "Minecraft: Bedrock Edition"
 
 ppCreatedAt :: UTCTime -> L.Text
 ppCreatedAt = L.pack . iso8601Show . utctDay
+
+fmtUUID :: UUID -> UUID
+fmtUUID (UUID txt) =
+  let
+    (a, txt'  )  = T.splitAt 8 txt
+    (b, txt'' )  = T.splitAt 4 txt'
+    (c, txt''')  = T.splitAt 4 txt''
+    (d, e   )  = T.splitAt 4 txt'''
+  in UUID $ T.intercalate "-" [a,b,c,d,e]
