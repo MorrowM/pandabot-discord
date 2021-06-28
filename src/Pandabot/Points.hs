@@ -121,9 +121,9 @@ registerLeaderboardCommand = void $ help (const "Shows the top bamboo shoot pand
       pure (usr ^. #username . strict, p)
 
     let txt = view lazy $ T.unlines [showt i <> ". " <> nm <> ": " <> showPoints p | (i, (nm, p)) <- zip [(1 :: Int)..] points]
-    void $ if null points
-      then tellt ctx "No one has any points yet!"
-      else tell @Embed ctx $ def
+    if null points
+      then tellt_ ctx "No one has any points yet!"
+      else tell_ @Embed ctx $ def
         & #title ?~ "Leaderboard"
         & #description ?~ txt
 

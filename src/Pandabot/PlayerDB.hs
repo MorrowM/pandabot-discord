@@ -231,8 +231,8 @@ registerPlayerCommands admin
         Nothing -> tellt_ ctx "Error: The given name and type already exist."
         Just memid -> do
           Just mem <- getCommunityMemberById memid
-          void $ tell @String ctx $ "Success, updated player with id " <>  show (memid2int memid) <> "."
-          tellembed ctx $ uncurry ppMemberGetResult mem
+          tell_ @String ctx $ "Success, updated player with id " <>  show (memid2int memid) <> "."
+          tell_ ctx $ uncurry ppMemberGetResult mem
 
     void
       $ help (const "Add a player name by id.")
@@ -242,8 +242,8 @@ registerPlayerCommands admin
         Nothing -> tellt_ ctx "Error: Player not found."
         Just _ -> do
           Just mem <- getCommunityMemberById memid
-          void $ tell @String ctx $ "Success, updated player with id " <>  show (memid2int memid) <> "."
-          tellembed ctx $ uncurry ppMemberGetResult mem
+          tell_ @String ctx $ "Success, updated player with id " <>  show (memid2int memid) <> "."
+          tell_ ctx $ uncurry ppMemberGetResult mem
 
     void
       $ help (const "Update a given name with another name.")
@@ -253,8 +253,8 @@ registerPlayerCommands admin
         Nothing -> tellt_ ctx "Error: Name not found."
         Just memid -> do
           Just mem <- getCommunityMemberById memid
-          void $ tell @String ctx $ "Success, updated player with id " <>  show (memid2int memid) <> "."
-          tellembed ctx $ uncurry ppMemberGetResult mem
+          tell_ @String ctx $ "Success, updated player with id " <>  show (memid2int memid) <> "."
+          tell_ ctx $ uncurry ppMemberGetResult mem
 
     -- Misc.
     void
@@ -265,12 +265,12 @@ registerPlayerCommands admin
           res <- searchCommunityMemberAllTypes name
           case res of
             []    -> tellt_ ctx "Error: Could not find player with that name."
-            names -> tellembed ctx $ ppGeneralSearchResults names
+            names -> tell_ ctx $ ppGeneralSearchResults names
         Just ty -> do
           res <- searchCommunityMember ty name
           case res of
             [] -> tellt_ ctx "Error: Could not find player with that name and type."
-            xs -> tellembed ctx $ ppMemberSearchResult xs
+            xs -> tell_ ctx $ ppMemberSearchResult xs
     void
       $ help (const "Remove a name entry for a player.")
       $ command @'[NameType, Named "name" Text] "removename" $ \ctx nametype name -> do
@@ -283,7 +283,7 @@ registerPlayerCommands admin
       $ help (const "Get a summary of all players.")
       $ command @'[] "summary" $ \ctx -> do
       Summary{..} <- getCommunityMemberSummary
-      tellembed ctx ( def
+      tell_ @Embed ctx ( def
         & #title ?~ "Player Summary"
         & #fields .~
               embedField "Total Players" (showtl memberCountTotal)
