@@ -1,6 +1,6 @@
 # Pandabot
 
-This is the moderation bot for the official [Ulraf Discord server](http://battlepandas.com/discord).
+This is the moderation bot for the official Ulraf Discord server.
 
 ## Installation
 
