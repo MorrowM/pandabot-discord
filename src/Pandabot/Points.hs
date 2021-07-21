@@ -160,7 +160,7 @@ awardMessagePoint reason msg usr = do
 awardPointMessageText :: Text -> Message -> Int -> Int -> L.Text
 awardPointMessageText reason msg points total =
   msg ^. #author . to mention
-  <> " has been awarded " <> showPoints points ^. lazy <> "  " <> reason ^. lazy <> "!\nThey now have "
+  <> " has been awarded " <> showPoints points ^. lazy <> " " <> reason ^. lazy <> "!\nThey now have "
   <> showPoints total ^. lazy  <> " total."
 
 -- | Format a point value to a phrase with proper grammer.
