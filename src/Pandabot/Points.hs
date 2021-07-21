@@ -32,6 +32,7 @@ import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 import qualified Data.Text.Lazy            as L
 import           Data.Traversable
+import qualified Data.Vector.Unboxing      as VU
 import qualified Polysemy.AtomicState      as P
 import qualified Polysemy.Fail             as P
 import qualified Polysemy.NonDet           as P
@@ -136,8 +137,8 @@ awardMessagePoint ::
     , P.AtomicState MessagePointMessages
     , P.GhcTime
     ] r
-  ) => Message -> User -> P.Sem r ()
-awardMessagePoint msg usr = do
+  ) => Text -> Message -> User -> P.Sem r ()
+awardMessagePoint reason msg usr = do
   Just gid <- pure (msg ^. #guildID)
   Right mem <- invoke $ GetGuildMember gid usr
   perms <- permissionsIn' gid mem
@@ -149,17 +150,17 @@ awardMessagePoint msg usr = do
   case mawardMsg of
     Nothing -> do
       Right awardMsg <- tellt msg $
-          awardPointMessageText msg 1 points
+          awardPointMessageText reason msg 1 points
       P.atomicModify' @MessagePointMessages $ #messages %~ Map.insert (msg ^. #id) (awardMsg, 1)
     Just (awardMsg, amnt) -> do
       void . invoke . EditMessage awardMsg awardMsg . editMessageContent . Just $
-          awardPointMessageText msg (succ amnt) points ^. strict
+          awardPointMessageText reason msg (succ amnt) points ^. strict
       P.atomicModify' @MessagePointMessages $ #messages %~ Map.adjust (over _2 succ) (msg ^. #id)
 
-awardPointMessageText :: Message -> Int -> Int -> L.Text
-awardPointMessageText msg points total =
+awardPointMessageText :: Text -> Message -> Int -> Int -> L.Text
+awardPointMessageText reason msg points total =
   msg ^. #author . to mention
-  <> " has been awarded " <> showPoints points ^. lazy <> " for being an awesome panda!\nThey now have "
+  <> " has been awarded " <> showPoints points ^. lazy <> "  " <> reason ^. lazy <> "!\nThey now have "
   <> showPoints total ^. lazy  <> " total."
 
 -- | Format a point value to a phrase with proper grammer.
@@ -181,7 +182,11 @@ registerPointGiveHandler ::
 registerPointGiveHandler = void $ P.runNonDetMaybe $ react @'MessageReactionAddEvt $ \(msg, usr, _chan, rct) -> do
   npEmoji <- P.asks @Config $ view #pointAssignEmoji
   guard $ npEmoji == rct
-  awardMessagePoint msg usr
+  notifGangRole <- P.asks @Config $ view #notifGangRole
+  let reason
+        | notifGangRole `VU.elem` (msg ^. #mentionRoles) = "for notifying the #NotifGang"
+        | otherwise = "for being an awesome panda"
+  awardMessagePoint reason msg usr
 
 registerPointRevokeHandler ::
   ( BotC r
@@ -210,5 +215,5 @@ registerPointRevokeHandler = void $ react @'MessageReactionRemoveEvt $ \(msg, us
         Just gid <- pure $ msg ^. #guildID
         points <- countPoints (msg ^. #author) gid
         void . invoke . EditMessage awardMsg awardMsg . editMessageContent . Just $
-          awardPointMessageText msg (pred amnt) points ^. strict
+          awardPointMessageText "for being an awesome panda" msg (pred amnt) points ^. strict -- TODO try to recover the original `reason`
         P.atomicModify' @MessagePointMessages $ #messages %~ Map.adjust (over _2 pred) (msg ^. #id)

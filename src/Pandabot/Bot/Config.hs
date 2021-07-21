@@ -20,6 +20,7 @@ instance ParseRecord (CLIOptions Wrapped)
 data Config = Config
   { botToken           :: Text
   , welcomeRole        :: Snowflake Role
+  , notifGangRole      :: Snowflake Role
   , pointAssignEmoji   :: RawEmoji
   , reactPositiveEmoji :: RawEmoji
   , commandPrefix      :: Text
