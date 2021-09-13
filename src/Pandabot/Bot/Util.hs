@@ -67,4 +67,4 @@ allVals :: (Enum a, Bounded a) => [a]
 allVals = [minBound..maxBound]
 
 tell_ :: forall msg r t. (BotC r, ToMessage msg, Tellable t) => t -> msg -> P.Sem r ()
-tell_ c msg = tell_ c msg
+tell_ c msg = void $ tell c msg

@@ -48,7 +48,7 @@ runBotWith cfg = Di.new $ \di ->
   . P.runFinal
   . P.embedToFinal @IO
   . DiP.runDiToIO di
-  . DiP.local filterShard
+--  . DiP.local filterShard
   . runCacheInMemory
   . runMetricsNoop
   . runPersistWith (cfg ^. #connectionString)
@@ -62,7 +62,7 @@ runBotWith cfg = Di.new $ \di ->
   . runBotIO'
     (BotToken (cfg ^. #botToken . lazy))
     (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)
-    (Just (StatusUpdateData Nothing (Just botActivity) "!grian" False))
+    (Just (StatusUpdateData Nothing (Just botActivity) Online False))
   . handleFailByLogging $ do
     db $ DB.runMigration migrateAll
     registerBotCommands
