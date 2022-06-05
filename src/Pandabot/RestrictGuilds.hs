@@ -1,7 +1,7 @@
 module Pandabot.RestrictGuilds where
 
 import           Calamity
-import           Control.Lens
+import           Optics
 import           Control.Monad
 import qualified Polysemy            as P
 import qualified Polysemy.Fail       as P

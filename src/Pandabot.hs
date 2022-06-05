@@ -10,7 +10,6 @@ import           Calamity.Commands.Context
 import           Calamity.Gateway
 import           Calamity.Metrics.Noop
 import           Calamity.Types.Model.Presence.Activity as Activity
-import           Control.Lens
 import           Control.Monad
 import qualified Data.Aeson                             as Aeson
 import           Data.Flags
@@ -23,6 +22,7 @@ import qualified Df1
 import qualified Di
 import qualified Di.Core
 import qualified DiPolysemy                             as DiP
+import           Optics
 import           Options.Generic
 import qualified Polysemy                               as P
 import qualified Polysemy.AtomicState                   as P
@@ -52,7 +52,7 @@ runBotWith cfg = Di.new $ \di ->
   . runCacheInMemory
   . runMetricsNoop
   . runPersistWith (cfg ^. #connectionString)
-  . useConstantPrefix (cfg ^. #commandPrefix . lazy)
+  . useConstantPrefix (cfg ^. #commandPrefix)
   . useFullContext
   . runReqInIO
   . P.runReader cfg
@@ -60,9 +60,9 @@ runBotWith cfg = Di.new $ \di ->
   . P.atomicStateToIO (MessagePointMessages Map.empty)
   . P.atomicStateToIO Unlocked
   . runBotIO'
-    (BotToken (cfg ^. #botToken . lazy))
+    (BotToken (cfg ^. #botToken))
     (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)
-    (Just (StatusUpdateData Nothing (Just botActivity) Online False))
+    (Just (StatusUpdateData Nothing [botActivity] Online False))
   . handleFailByLogging $ do
     db $ DB.runMigration migrateAll
     registerBotCommands
@@ -91,8 +91,8 @@ main = do
       b <- mb
       if b then x else y
 
-filterShard :: Di.Core.Di level Di.Path msg -> Di.Core.Di level Di.Path msg
-filterShard = Di.Core.filter $ \_ path _ ->
+_filterShard :: Di.Core.Di level Di.Path msg -> Di.Core.Di level Di.Path msg
+_filterShard = Di.Core.filter $ \_ path _ ->
   path /= shardPath
   where
     shardPath = Seq.fromList [Df1.Push "calamity", Df1.Push "calamity-shard", Df1.Attr "shard-id" "0"]

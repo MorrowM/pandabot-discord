@@ -5,8 +5,8 @@ module Pandabot.Bot.Config
 
 import           Calamity
 import           Data.Aeson
-import           Data.Generics.Labels ()
 import           GHC.Generics
+import           Optics
 import           Options.Generic
 
 -- | CLI options
@@ -43,3 +43,7 @@ data VoiceRole = VoiceRole
   , textChannel   :: Maybe (Snowflake TextChannel)
   } deriving (Show, Eq, Generic)
     deriving anyclass (FromJSON, ToJSON)
+
+makeFieldLabelsNoPrefix ''Config
+makeFieldLabelsNoPrefix ''VoiceConfig
+makeFieldLabelsNoPrefix ''VoiceRole

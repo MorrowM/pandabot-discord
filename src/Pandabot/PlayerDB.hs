@@ -6,10 +6,9 @@ import           Pandabot.Bot.Database
 import           Pandabot.Bot.Schema
 import           Pandabot.Bot.Util
 
-import           Calamity
+import           Calamity                        hiding (select)
 import           Calamity.Commands
 import           Calamity.Commands.Context       (FullContext)
-import           Control.Lens                    (mapped, (%~), (&), (.~), (?~))
 import           Control.Monad
 import           Data.Aeson.Encode.Pretty
 import           Data.ByteString.Lazy            (ByteString)
@@ -20,7 +19,6 @@ import qualified Data.Map.Strict                 as Map
 import           Data.Maybe
 import           Data.Text                       (Text)
 import qualified Data.Text                       as T
-import qualified Data.Text.Lazy                  as L
 import           Data.Time
 import           Data.Time.Format.ISO8601
 import           Data.Traversable
@@ -29,10 +27,11 @@ import           Database.Esqueleto.Experimental (BackendKey (unSqlBackendKey),
                                                   innerJoin, insert, like,
                                                   select, table,
                                                   type (:&) ((:&)), val, where_,
-                                                  (%), (++.), (==.))
+                                                  (++.), (==.))
 import qualified Database.Esqueleto.Experimental as E
 import qualified Database.Persist                as P
 import           GHC.Generics                    (Generic)
+import           Optics
 import           Pandabot.PlayerDB.Whitelist
 import qualified Polysemy                        as P
 import           Polysemy.Time
@@ -73,7 +72,7 @@ searchCommunityMember :: P.Member Persistable r
 searchCommunityMember nametype name = do
   res <- db $ select $ do
     memname <- from $ table @MemberName
-    where_ (memname E.^. MemberNameName `like` (%) ++. val name ++. (%))
+    where_ (memname E.^. MemberNameName `like` (E.%) ++. val name ++. (E.%))
     where_ (memname E.^. MemberNameNameType ==. val nametype)
     pure memname
 
@@ -87,7 +86,7 @@ searchCommunityMemberAllTypes :: P.Member Persistable r
 searchCommunityMemberAllTypes name =
   fmap (map P.entityVal) $ db $ select $ do
     memname <- from $ table @MemberName
-    where_ (memname E.^. MemberNameName `like` (%) ++. val name ++. (%))
+    where_ (memname E.^. MemberNameName `like` (E.%) ++. val name ++. (E.%))
     pure memname
 
 getCommunityMemberById :: P.Member Persistable r
@@ -183,13 +182,14 @@ generateWhitelist = do
     where_ (mns E.^. MemberNameNameType  E.==. val MinecraftJavaName)
     pure mns
   let uuids = [uuid | (Entity _ (MemberName _ _ _ (Just uuid))) <- mns]
-  encodePretty . (#getWhitelist . mapped . #uuid %~ fmtUUID)  <$> fetchWhitelist uuids
+  encodePretty . (#getWhitelist % mapped % #uuid %~ fmtUUID)  <$> fetchWhitelist uuids
 
 
 registerPlayerCommands ::
   ( BotC r
   , P.Members '[Persistable, GhcTime, Req] r
-  ) => Check FullContext -> P.Sem (DSLState FullContext r) ()
+  , DSLC FullContext r
+  ) => Check FullContext -> P.Sem r ()
 registerPlayerCommands admin
   = requires [admin]
   $ hide
@@ -202,8 +202,8 @@ registerPlayerCommands admin
       $ command @'[NameType, Named "name" Text] "new" $ \ctx ty name -> do
       (_, memid) <- createCommunityMember ty name
       Just mem <- getCommunityMemberById memid
-      invoke_ $ CreateMessage ctx $ def
-        & #embed ?~ uncurry ppMemberGetResult mem
+      invoke_ $ CreateMessage ctx $ def @CreateMessageOptions
+        & #embeds ?~ [uncurry ppMemberGetResult mem]
         & #content ?~ "Success, created player with id " <>  showt (memid2int memid) <> "."
 
     void
@@ -211,8 +211,8 @@ registerPlayerCommands admin
       $ command @'[Named "id" Int] "get" $ \ctx memid -> do
       mmem <- getCommunityMemberById (int2memid memid)
       case mmem of
-        Nothing -> tellts_ ctx "Error: Could not find player with that id."
-        Just mem -> invoke_ $ CreateMessage ctx (def & #embed ?~ uncurry ppMemberGetResult mem)
+        Nothing  -> tellt_ ctx "Error: Could not find player with that id."
+        Just mem -> tell_ ctx (uncurry ppMemberGetResult mem)
 
     void
       $ help (const "Remove a player by id.")
@@ -277,7 +277,7 @@ registerPlayerCommands admin
       mmem <- removeCommunityMemberName nametype name
       case mmem of
         Nothing -> tellt_ ctx "Error: Could not find player with that name and type."
-        Just mem -> invoke_ $ CreateMessage ctx (def & #embed ?~ uncurry ppMemberGetResult mem)
+        Just mem -> tell_ ctx (uncurry ppMemberGetResult mem)
 
     void
       $ help (const "Get a summary of all players.")
@@ -286,9 +286,9 @@ registerPlayerCommands admin
       tell_ @Embed ctx ( def
         & #title ?~ "Player Summary"
         & #fields .~
-              embedField "Total Players" (showtl memberCountTotal)
-              :  [EmbedField (ppType ty <> " Count") (showtl cnt) True       | (ty,cnt)     <- Map.toAscList memberNameCountByType]
-              <> [EmbedField (ppStatus status <> " Count") (showtl cnt) True | (status,cnt) <- Map.toAscList memberCountByStatus]
+              embedField "Total Players" (showt memberCountTotal)
+              :  [EmbedField (ppType ty <> " Count") (showt cnt) True       | (ty,cnt)     <- Map.toAscList memberNameCountByType]
+              <> [EmbedField (ppStatus status <> " Count") (showt cnt) True | (status,cnt) <- Map.toAscList memberCountByStatus]
         )
 
     void
@@ -301,7 +301,7 @@ registerPlayerCommands admin
           Just mem <- getCommunityMemberById memid
           invoke_ $ CreateMessage ctx (def
             & #content ?~ ("Success, updated player status." :: Text)
-            & #embed ?~ uncurry ppMemberGetResult mem
+            & #embeds ?~ [uncurry ppMemberGetResult mem]
             )
 
     void
@@ -309,11 +309,11 @@ registerPlayerCommands admin
       $ command @'[] "whitelist" $ \ctx -> do
         wl <- generateWhitelist
         invoke_ $ CreateMessage ctx $ def
-          & #file ?~ ("whitelist.json", wl)
+          & #attachments ?~ [CreateMessageAttachment "whitelist.json" (Just "Minecraft Whitelist file") wl]
 
 ppMemberGetResult :: Entity CommunityMember -> [MemberName] -> Embed
 ppMemberGetResult (Entity memid (CommunityMember status createdAt)) ty = def
-      & #title ?~ "Member Lookup Result • Id " <> showtl (memid2int memid)
+      & #title ?~ "Member Lookup Result • Id " <> showt (memid2int memid)
       & #footer ?~ footer
       & #fields .~ fields
       & #timestamp ?~ createdAt
@@ -331,7 +331,7 @@ ppMemberSearchResult mems = def
   & #footer ?~ embedFooter (fmtResultCount (length mems))
   where
     flds = concat
-      [ EmbedField "Player Id" (showtl memid) False
+      [ EmbedField "Player Id" (showt memid) False
       : EmbedField "Status" (ppStatus status) True
       : EmbedField "Added" (ppCreatedAt createdAt) True
       : nameFields
@@ -339,17 +339,17 @@ ppMemberSearchResult mems = def
       , let nameFields = map (\nm -> let (k, v) = ppMemberNamePair nm in EmbedField k v True) names
       ]
 
-fmtResultCount :: Int -> L.Text
+fmtResultCount :: Int -> T.Text
 fmtResultCount 0 = "No Results"
 fmtResultCount 1 = "1 Result"
-fmtResultCount n = showtl n <> " Results"
+fmtResultCount n = showt n <> " Results"
 
 
 ppGeneralSearchResults :: [MemberName] -> Embed
 ppGeneralSearchResults names = def
   & #title ?~ "Search Results"
   & #footer ?~ embedFooter (fmtResultCount (length names))
-  & #fields .~ [embedField (ppType nametype) (L.fromStrict name) | (MemberName _ nametype name _) <- take 10 names]
+  & #fields .~ [embedField (ppType nametype) name | (MemberName _ nametype name _) <- take 10 names]
 
 memid2int :: Key CommunityMember -> Int64
 memid2int = unSqlBackendKey . unCommunityMemberKey
@@ -357,30 +357,30 @@ memid2int = unSqlBackendKey . unCommunityMemberKey
 int2memid :: Integral int => int -> Key CommunityMember
 int2memid = CommunityMemberKey . E.SqlBackendKey . fromIntegral
 
-ppStatus :: CommunityMemberStatus -> L.Text
+ppStatus :: CommunityMemberStatus -> T.Text
 ppStatus StandardMember = "Standard"
 ppStatus Whitelisted    = "Whitelisted"
 ppStatus Banned         = "Banned"
 
-ppMemberName :: MemberName -> L.Text
+ppMemberName :: MemberName -> T.Text
 ppMemberName = fmt . ppMemberNamePair
   where fmt (a, b) = a <> ": " <> b
 
-ppMemberNamePair :: MemberName -> (L.Text, L.Text)
-ppMemberNamePair (MemberName _ ty (L.fromStrict -> name) uuid) = (ppType ty, name')
+ppMemberNamePair :: MemberName -> (T.Text, T.Text)
+ppMemberNamePair (MemberName _ ty name uuid) = (ppType ty, name')
   where
     name' = case ty of
-      MinecraftJavaName -> name <> " {" <> L.fromStrict (getUUID $ fromJust uuid) <> "}"
+      MinecraftJavaName -> name <> " {" <> (getUUID $ fromJust uuid) <> "}"
       _                 -> name
 
-ppType :: NameType -> L.Text
+ppType :: NameType -> T.Text
 ppType TwitchName           = "Twitch"
 ppType DiscordName          = "Discord"
 ppType MinecraftJavaName    = "Minecraft: Java Edition"
 ppType MinecraftBedrockName = "Minecraft: Bedrock Edition"
 
-ppCreatedAt :: UTCTime -> L.Text
-ppCreatedAt = L.pack . iso8601Show . utctDay
+ppCreatedAt :: UTCTime -> T.Text
+ppCreatedAt = T.pack . iso8601Show . utctDay
 
 fmtUUID :: UUID -> UUID
 fmtUUID (UUID txt) =

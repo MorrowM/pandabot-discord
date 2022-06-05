@@ -4,25 +4,21 @@ module Pandabot.Bot.Util
   , debug
   , tellt
   , whenJust
-  , tellts
   , invoke_
   , (.:)
-  , tellts_
   , tellt_
   , allVals
   , tell_
   ) where
 
 import           Calamity
-import           Control.Lens
 import           Control.Monad
-import qualified Data.Text      as S
-import           Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy as L
-import           Data.Text.Lens
-import qualified DiPolysemy     as DiP
-import qualified Polysemy       as P
-import qualified Polysemy.Fail  as P
+import           Data.Text        (Text)
+import           Data.Text.Optics
+import qualified DiPolysemy       as DiP
+import           Optics
+import qualified Polysemy         as P
+import qualified Polysemy.Fail    as P
 
 -- | Handle the `Fail` effect by logging it.
 handleFailByLogging :: BotC r => P.Sem (P.Fail : r) a -> P.Sem r ()
@@ -37,21 +33,13 @@ info, debug :: BotC r => Text -> P.Sem r ()
 info = DiP.info
 debug = DiP.info
 
--- | `tell` a lazy `Text`.
+-- | `tell` a `Text`.
 tellt :: (BotC r, Tellable t) => t -> Text -> P.Sem r (Either RestError Message)
-tellt t m = tell t $ L.toStrict m
+tellt = tell @Text
 
--- | `tell` a lazy `Text`, discarding the result.
+-- | `tell` a `Text`, discarding the result.
 tellt_ :: (BotC r, Tellable t) => t -> Text -> P.Sem r ()
-tellt_ t m = tell_ t $ L.toStrict m
-
--- | `tell` a strict `Text`.
-tellts :: (BotC r, Tellable t) => t -> S.Text -> P.Sem r (Either RestError Message)
-tellts = tell @S.Text
-
--- | `tell` a strict `Text`, discarding the result.
-tellts_ :: (BotC r, Tellable t) => t -> S.Text -> P.Sem r ()
-tellts_ = void .: tell @S.Text
+tellt_ = void .: tell @Text
 
 whenJust :: Applicative f => Maybe a -> (a -> f ()) -> f ()
 whenJust = flip $ maybe (pure ())

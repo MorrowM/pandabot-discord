@@ -3,16 +3,17 @@ module Pandabot.PlayerDB.Whitelist where
 
 import           Pandabot.Bot.Schema
 
-import           Control.Lens
 import           Data.Aeson
-import           Data.Aeson.Lens
+import           Data.Aeson.Optics
 import           Data.Proxy
-import           Data.Text           (Text)
+import           Data.Text               (Text)
 import           Data.Traversable
-import           GHC.Generics        (Generic)
-import           Network.HTTP.Req    hiding (Req, req)
-import qualified Network.HTTP.Req    as R (req)
-import qualified Polysemy            as P
+import           GHC.Generics            (Generic)
+import           Network.HTTP.Req        hiding (Req, req)
+import qualified Network.HTTP.Req        as R (req)
+import           Optics
+import           Optics.Operators.Unsafe ((^?!))
+import qualified Polysemy                as P
 
 data Req m a where
   Req ::
@@ -64,12 +65,12 @@ fetchNameHistoryByUUID nm =
 fetchUUIDByName :: P.Member Req r => Text -> P.Sem r UUID
 fetchUUIDByName name =  do
   entry <- fetchEntryByName name
-  pure $ UUID $ entry ^?! key "id" . _String
+  pure $ UUID $ entry ^?! key "id" % _String
 
 fetchCurrentNameByUUID :: P.Member Req r => UUID -> P.Sem r Text
 fetchCurrentNameByUUID u = do
   NameHistory nh <- fetchNameHistoryByUUID u
-  pure $ nh ^. to last . #name
+  pure $ nh ^. to last % #name
 
 fetchWhitelist :: P.Member Req r => [UUID] -> P.Sem r Whitelist
 fetchWhitelist uuids = Whitelist <$> do

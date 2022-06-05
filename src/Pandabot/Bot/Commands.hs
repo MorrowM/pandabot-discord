@@ -32,7 +32,7 @@ registerBotCommands ::
     , Persistable
     , P.Fail
     , P.GhcTime
-    , ConstructContext Message FullContext IO ()
+    , ConstructContext (Message, User, Maybe Member) FullContext IO ()
     , P.AtomicState LockdownState
     , Req
     ] r

@@ -17,7 +17,7 @@ module Pandabot.Bot.Schema where
 
 import           Pandabot.Bot.Orphans           ()
 
-import           Calamity
+import           Calamity hiding (Button)
 import           Calamity.Commands
 import           CalamityCommands.ParameterInfo
 import           Control.Applicative

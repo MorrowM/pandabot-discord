@@ -20,7 +20,6 @@ import qualified Polysemy                  as P
 import           Calamity.Commands
 import           Calamity.Commands.Context (FullContext)
 import           Control.Arrow             ((&&&))
-import           Control.Lens
 import           Control.Monad
 import           Data.Default
 import           Data.Flags
@@ -30,9 +29,9 @@ import           Data.Maybe
 import           Data.Ord
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
-import qualified Data.Text.Lazy            as L
 import           Data.Traversable
 import qualified Data.Vector.Unboxing      as VU
+import           Optics
 import qualified Polysemy.AtomicState      as P
 import qualified Polysemy.Fail             as P
 import qualified Polysemy.NonDet           as P
@@ -71,18 +70,23 @@ registerAwardCommand ::
     , P.GhcTime
     ] r
   ) => Check FullContext -> P.Sem (DSLState FullContext r) ()
-registerAwardCommand admin = void $ requires [admin] $ help (const "Award bamboo shoots to pandas.") $ hide
-    $ command @'[Member, Named "shoots" (Maybe Int), KleenePlusConcat L.Text] "award" $ \ctx mem mamnt reason -> do
+registerAwardCommand admin = void
+    $ P.runNonDetMaybe
+    $ requires [admin]
+    $ help (const "Award bamboo shoots to pandas.")
+    $ hide
+    $ command @'[Member, Named "shoots" (Maybe Int), KleenePlusConcat Text] "award" $ \ctx mem mamnt reason -> do
+    Just guild <- pure $ ctx ^. #guild
     time <- P.now
     let amnt = fromMaybe 1 mamnt
-        point = FreePoint (mem ^. #guildID) (getID ctx) (mem ^. #id) time amnt
+        point = FreePoint (guild ^. #id) (ctx ^. #user % #id) (mem ^. #id) time amnt
     db_ $ DB.insert point
-    points <- countPoints mem mem
+    points <- countPoints mem guild
     void . invoke $ DeleteMessage ctx ctx
     void . tellt ctx $
       mem ^. to mention
-      <> " has been awarded " <> (showPoints amnt ^. lazy) <> "! " <> reason <> "\nThey now have "
-      <> (showPoints points ^. lazy)  <> " total."
+      <> " has been awarded " <> showPoints amnt <> "! " <> reason <> "\nThey now have "
+      <> showPoints points  <> " total."
 
 
 registerShootsCommand ::
@@ -91,11 +95,13 @@ registerShootsCommand ::
    '[ Persistable
     ] r
   ) => P.Sem (DSLState FullContext r) ()
-registerShootsCommand = void $ help (const "Shows how many bamboo shoots you have in total.")
-    $ command @'[Maybe User] "shoots" $ \ctx muser -> do
+registerShootsCommand = void
+    $ help (const "Shows how many bamboo shoots you have in total.")
+    $ command @'[Maybe User] "shoots"
+    $ \ctx muser -> do
     Just gld <- pure (ctx ^. #guild)
     points <- countPoints (fromMaybe (ctx ^. #user) muser) gld
-    void . tellt ctx $ (fromMaybe (ctx ^. #user) muser ^. #username) <> " has " <> (showPoints points ^. lazy) <> "."
+    void . tellt ctx $ (fromMaybe (ctx ^. #user) muser ^. #username) <> " has " <> showPoints points <> "."
 
 registerLeaderboardCommand ::
   ( BotC r
@@ -103,8 +109,10 @@ registerLeaderboardCommand ::
    '[ Persistable
     ] r
   ) => P.Sem (DSLState FullContext r) ()
-registerLeaderboardCommand = void $ help (const "Shows the top bamboo shoot pandas.")
-    $ commandA @'[] "leaderboard" ["lb"] $ \ctx -> do
+registerLeaderboardCommand = void
+    $ help (const "Shows the top bamboo shoot pandas.")
+    $ commandA @'[] "leaderboard" ["lb"]
+    $ \ctx -> do
     Just gld <- pure (ctx ^. #guild)
     messagePointsRaw <- db $ selectList [MessagePointGuild ==. getID gld] [Asc MessagePointAssignedTo]
     freePointsRaw <- db $ selectList [FreePointGuild ==. getID gld] [Asc FreePointAssignedTo]
@@ -119,9 +127,9 @@ registerLeaderboardCommand = void $ help (const "Shows the top bamboo shoot pand
         topFive = take 5 . sortOn (Down . snd) . Map.toList $ pointsMap
     points <- for topFive $ \(u, p) -> do
       Just usr <- upgrade u
-      pure (usr ^. #username . strict, p)
+      pure (usr ^. #username, p)
 
-    let txt = view lazy $ T.unlines [showt i <> ". " <> nm <> ": " <> showPoints p | (i, (nm, p)) <- zip [(1 :: Int)..] points]
+    let txt = T.unlines [showt i <> ". " <> nm <> ": " <> showPoints p | (i, (nm, p)) <- zip [(1 :: Int)..] points]
     if null points
       then tellt_ ctx "No one has any points yet!"
       else tell_ @Embed ctx $ def
@@ -144,9 +152,9 @@ awardMessagePoint reason msg usr = do
   perms <- permissionsIn' gid mem
   guard $ perms `containsAll` administrator
   time <- P.now
-  db_ $ DB.insert (MessagePoint (msg ^.  #id) gid (usr ^. #id) (msg ^. #author) time)
+  db_ $ DB.insert (MessagePoint (msg ^.  #id) gid (usr ^. #id) (msg ^. #author % to getID) time)
   points <- countPoints (msg ^. #author) gid
-  mawardMsg <- P.atomicGets @MessagePointMessages (view $ #messages . to (Map.lookup $ msg ^. #id))
+  mawardMsg <- P.atomicGets @MessagePointMessages (view $ #messages % to (Map.lookup $ msg ^. #id))
   case mawardMsg of
     Nothing -> do
       Right awardMsg <- tellt msg $
@@ -154,14 +162,14 @@ awardMessagePoint reason msg usr = do
       P.atomicModify' @MessagePointMessages $ #messages %~ Map.insert (msg ^. #id) (awardMsg, 1)
     Just (awardMsg, amnt) -> do
       void . invoke . EditMessage awardMsg awardMsg . editMessageContent . Just $
-          awardPointMessageText reason msg (succ amnt) points ^. strict
+          awardPointMessageText reason msg (succ amnt) points
       P.atomicModify' @MessagePointMessages $ #messages %~ Map.adjust (over _2 succ) (msg ^. #id)
 
-awardPointMessageText :: Text -> Message -> Int -> Int -> L.Text
+awardPointMessageText :: Text -> Message -> Int -> Int -> Text
 awardPointMessageText reason msg points total =
-  msg ^. #author . to mention
-  <> " has been awarded " <> showPoints points ^. lazy <> " " <> reason ^. lazy <> "!\nThey now have "
-  <> showPoints total ^. lazy  <> " total."
+  msg ^. #author % to (getID @User) % to mention
+  <> " has been awarded " <> showPoints points <> " " <> reason <> "!\nThey now have "
+  <> showPoints total  <> " total."
 
 -- | Format a point value to a phrase with proper grammer.
 showPoints :: Int -> Text
@@ -205,7 +213,7 @@ registerPointRevokeHandler = void $ react @'MessageReactionRemoveEvt $ \(msg, us
       [ MessagePointMessage ==. (msg ^. #id)
       , MessagePointAssignedBy ==. (usr ^. #id)
       ]
-    mmsg <- P.atomicGets @MessagePointMessages (view $ #messages . to (Map.lookup (msg ^. #id)))
+    mmsg <- P.atomicGets @MessagePointMessages (view $ #messages % to (Map.lookup (msg ^. #id)))
     case mmsg of
       Nothing -> pure ()
       Just (awardMsg, 1) -> do
@@ -215,5 +223,5 @@ registerPointRevokeHandler = void $ react @'MessageReactionRemoveEvt $ \(msg, us
         Just gid <- pure $ msg ^. #guildID
         points <- countPoints (msg ^. #author) gid
         void . invoke . EditMessage awardMsg awardMsg . editMessageContent . Just $
-          awardPointMessageText "for being an awesome panda" msg (pred amnt) points ^. strict -- TODO try to recover the original `reason`
+          awardPointMessageText "for being an awesome panda" msg (pred amnt) points -- TODO try to recover the original `reason`
         P.atomicModify' @MessagePointMessages $ #messages %~ Map.adjust (over _2 pred) (msg ^. #id)

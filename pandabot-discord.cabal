@@ -50,6 +50,7 @@ library
     GADTs
     GeneralizedNewtypeDeriving
     LambdaCase
+    MultiParamTypeClasses
     MultiWayIf
     NumericUnderscores
     OverloadedLabels
@@ -62,6 +63,7 @@ library
     TypeApplications
     TypeFamilies
     TypeOperators
+    UndecidableInstances
     ViewPatterns
 
   ghc-options:
@@ -69,40 +71,39 @@ library
     -fplugin=Polysemy.Plugin
 
   build-depends:
-    , aeson                 ^>=1.5.6.0
-    , aeson-pretty          ^>=0.8.8
-    , base                  >=4.7       && <5
-    , bytestring            ^>=0.10.12.0
-    , calamity              ^>=0.1.30.3
-    , calamity-commands     ^>=0.1.3.0
-    , conduit               ^>=1.3.4.1
-    , containers            ^>=0.6.2.1
-    , data-default          ^>=0.7.1.1
-    , data-flags            ^>=0.0.3.4
-    , df1                   ^>=0.4
-    , di                    ^>=1.3
-    , di-core               ^>=1.0.4
-    , di-polysemy           ^>=0.2.0.0
-    , directory             ^>=1.3.6.0
-    , esqueleto             ^>=3.5.1.0
-    , generic-lens          ^>=2.1.0.0
-    , lens                  ^>=5.0.1
-    , lens-aeson            ^>=1.1.1
-    , megaparsec            ^>=9.0.1
-    , monad-logger          ^>=0.3.36
-    , optparse-generic      ^>=1.4.4
-    , persistent            ^>=2.13.0.1
-    , persistent-sqlite     ^>=2.13.0.0
-    , polysemy              ^>=1.5.0.0
-    , polysemy-plugin       ^>=0.3.0.0
-    , polysemy-time         ^>=0.1.2.1
-    , req                   ^>=3.9.1
-    , text                  ^>=1.2.4.1
-    , text-show             ^>=3.9
-    , time                  ^>=1.9.3
-    , unboxing-vector       ^>=0.2.0.0
-    , unordered-containers  ^>=0.2.14.0
-    , yaml                  ^>=0.11.5.0
+    , aeson
+    , aeson-optics
+    , aeson-pretty
+    , base                  >=4.7 && <5
+    , bytestring
+    , calamity              ^>=0.5
+    , calamity-commands     ^>=0.4
+    , conduit
+    , containers
+    , data-default
+    , data-flags
+    , df1
+    , di
+    , di-core
+    , di-polysemy
+    , directory
+    , esqueleto
+    , megaparsec
+    , monad-logger
+    , optics
+    , optparse-generic
+    , persistent
+    , persistent-sqlite
+    , polysemy
+    , polysemy-plugin
+    , polysemy-time
+    , req
+    , text
+    , text-show
+    , time
+    , unboxing-vector
+    , unordered-containers
+    , yaml
 
 executable pandabot
   main-is:          Main.hs
@@ -145,14 +146,14 @@ test-suite spec
 
   ghc-options:        -Wall
   build-depends:
-    , aeson             ^>=1.5.6.0
-    , base              ^>=4.14.1.0
-    , calamity          ^>=0.1.30.2
-    , generic-lens      ^>=2.1.0.0
-    , hspec             ^>=2.8.2
-    , hspec-discover    ^>=2.8.2
-    , lens              ^>=5.0.1
+    , aeson
+    , base
+    , calamity
+    , generic-lens
+    , hspec
+    , hspec-discover
+    , lens
     , pandabot-discord
-    , polysemy          ^>=1.5.0.0
-    , text              ^>=1.2.4.1
-    , yaml              ^>=0.11.5.0
+    , polysemy
+    , text
+    , yaml
