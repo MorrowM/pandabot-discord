@@ -1,3 +1,6 @@
+{-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant pure" #-}
 module Pandabot.Buttons
   ( registerButtonCommands
   , registerButtonPressHandler
@@ -7,6 +10,7 @@ import           Calamity                  hiding (Button)
 import           Calamity.Cache.Eff
 import           Calamity.Commands
 import           Calamity.Commands.Context (FullContext)
+import qualified Calamity.Interactions     as I
 import           Control.Monad
 import           Data.Default
 import           Data.Foldable
@@ -36,7 +40,15 @@ registerButtonCommands admin = requires [admin] $ help (const "Manage buttons.")
       let newButton = Button (getID chan) (getID msg) (pack $ show emoj) (getID role)
       info $ "Adding button " <> showt (FromStringShow newButton)
       db_ $ insert newButton
-      invoke $ CreateReaction chan msg emoj
+      let view = I.row $ do
+            btn <- I.button' (#emoji ?~ emoj)
+            pure btn
+      I.runView view (tell $ getID @Channel chan) $ \a -> do
+        when a $ do
+          usr <- I.getInteractionUser
+          invoke_ $ AddGuildMemberRole (getID @Guild chan) usr role
+          void $ I.respondEphemeral $ "Added role " <> role ^. #name
+      -- invoke $ CreateReaction chan msg emoj
 
     void $ help (const "Insert a role button into an existing message")
       $ command @'[GuildChannel, RawEmoji, Role, Snowflake Message] "insert" $ \_ctx chan emoj role msg -> void $ do
