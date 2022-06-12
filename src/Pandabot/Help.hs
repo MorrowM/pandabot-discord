@@ -5,33 +5,33 @@ module Pandabot.Help
   , adminHelpCommand
   ) where
 
-import           Calamity
-import qualified Calamity                              as C
-import qualified Calamity.Commands                     as C
-import           Calamity.Commands.Context             (FullContext)
-import           CalamityCommands.AliasType
-import           CalamityCommands.Check
-import           CalamityCommands.Command
-import           CalamityCommands.CommandUtils
-import           CalamityCommands.Context
-import           CalamityCommands.Dsl
-import           CalamityCommands.Group
-import           CalamityCommands.Handler
-import           CalamityCommands.Internal.LocalWriter
-import           CalamityCommands.ParameterInfo
-import           Control.Applicative
-import           Data.Default
-import qualified Data.HashMap.Lazy                     as LH
-import           Data.List                             (partition)
-import           Data.List.NonEmpty                    (NonEmpty (..))
-import qualified Data.List.NonEmpty                    as NE
-import           Data.Maybe                            (mapMaybe)
-import qualified Data.Text                             as T
-import           Optics
-import           Pandabot.Bot.Util
-import qualified Polysemy                              as P
-import qualified Polysemy.Fail                         as P
-import qualified Polysemy.Reader                       as P
+import Calamity
+import Calamity qualified as C
+import Calamity.Commands qualified as C
+import Calamity.Commands.Context ( FullContext )
+import CalamityCommands.AliasType
+import CalamityCommands.Check
+import CalamityCommands.Command
+import CalamityCommands.CommandUtils
+import CalamityCommands.Context
+import CalamityCommands.Dsl
+import CalamityCommands.Group
+import CalamityCommands.Handler
+import CalamityCommands.Internal.LocalWriter
+import CalamityCommands.ParameterInfo
+import Control.Applicative
+import Data.Default
+import Data.HashMap.Lazy qualified as LH
+import Data.List ( partition )
+import Data.List.NonEmpty ( NonEmpty(..) )
+import Data.List.NonEmpty qualified as NE
+import Data.Maybe ( mapMaybe )
+import Data.Text qualified as T
+import Optics
+import Pandabot.Bot.Util
+import Polysemy qualified as P
+import Polysemy.Fail qualified as P
+import Polysemy.Reader qualified as P
 
 customHelpCommand :: C.BotC r => P.Sem (C.DSLState FullContext r) (C.Command FullContext)
 customHelpCommand = mkCommand (helpCommand False "help" )

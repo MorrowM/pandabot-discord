@@ -2,40 +2,49 @@
 module Pandabot.PlayerDB where
 
 
-import           Pandabot.Bot.Database
-import           Pandabot.Bot.Schema
-import           Pandabot.Bot.Util
+import Pandabot.Bot.Database
+import Pandabot.Bot.Schema
+import Pandabot.Bot.Util
 
-import           Calamity                        hiding (select)
-import           Calamity.Commands
-import           Calamity.Commands.Context       (FullContext)
-import           Control.Monad
-import           Data.Aeson.Encode.Pretty
-import           Data.ByteString.Lazy            (ByteString)
-import           Data.Default
-import           Data.Int
-import           Data.Map.Strict                 (Map)
-import qualified Data.Map.Strict                 as Map
-import           Data.Maybe
-import           Data.Text                       (Text)
-import qualified Data.Text                       as T
-import           Data.Time
-import           Data.Time.Format.ISO8601
-import           Data.Traversable
-import           Database.Esqueleto.Experimental (BackendKey (unSqlBackendKey),
-                                                  Entity (Entity), from,
-                                                  innerJoin, insert, like,
-                                                  select, table,
-                                                  type (:&) ((:&)), val, where_,
-                                                  (++.), (==.))
-import qualified Database.Esqueleto.Experimental as E
-import qualified Database.Persist                as P
-import           GHC.Generics                    (Generic)
-import           Optics
-import           Pandabot.PlayerDB.Whitelist
-import qualified Polysemy                        as P
-import           Polysemy.Time
-import           TextShow
+import Calamity hiding ( select )
+import Calamity.Commands
+import Calamity.Commands.Context ( FullContext )
+import Control.Monad
+import Data.Aeson.Encode.Pretty
+import Data.ByteString.Lazy ( ByteString )
+import Data.Default
+import Data.Int
+import Data.Map.Strict ( Map )
+import Data.Map.Strict qualified as Map
+import Data.Maybe
+import Data.Text ( Text )
+import Data.Text qualified as T
+import Data.Time
+import Data.Time.Format.ISO8601
+import Data.Traversable
+import Database.Esqueleto.Experimental
+    ( BackendKey(unSqlBackendKey)
+    , Entity(Entity)
+    , from
+    , innerJoin
+    , insert
+    , like
+    , select
+    , table
+    , type (:&)((:&))
+    , val
+    , where_
+    , (++.)
+    , (==.)
+    )
+import Database.Esqueleto.Experimental qualified as E
+import Database.Persist qualified as P
+import GHC.Generics ( Generic )
+import Optics
+import Pandabot.PlayerDB.Whitelist
+import Polysemy qualified as P
+import Polysemy.Time
+import TextShow
 
 
 createEmptyCommunityMember :: P.Members '[Persistable, GhcTime] r
@@ -70,13 +79,13 @@ linkMemberNames nametype name nametype' name' = do
 searchCommunityMember :: P.Member Persistable r
   => NameType -> Text -> P.Sem r [(Entity CommunityMember, [MemberName])]
 searchCommunityMember nametype name = do
-  res <- db $ select $ do
+  res <- db $ select do
     memname <- from $ table @MemberName
     where_ (memname E.^. MemberNameName `like` (E.%) ++. val name ++. (E.%))
     where_ (memname E.^. MemberNameNameType ==. val nametype)
     pure memname
 
-  for res $ \(Entity _ (MemberName memid _ _ _)) -> db $ do
+  for res $ \(Entity _ (MemberName memid _ _ _)) -> db do
     searchres <- map P.entityVal <$> P.selectList [MemberNameMemberID P.==. memid] [P.Asc MemberNameNameType]
     Just mem <- P.get memid
     pure (Entity memid mem, searchres)
@@ -84,7 +93,7 @@ searchCommunityMember nametype name = do
 searchCommunityMemberAllTypes :: P.Member Persistable r
   => Text -> P.Sem r [MemberName]
 searchCommunityMemberAllTypes name =
-  fmap (map P.entityVal) $ db $ select $ do
+  fmap (map P.entityVal) $ db $ select do
     memname <- from $ table @MemberName
     where_ (memname E.^. MemberNameName `like` (E.%) ++. val name ++. (E.%))
     pure memname
@@ -127,10 +136,10 @@ getCommunityMemberSummary :: P.Member Persistable r
   => P.Sem r Summary
 getCommunityMemberSummary = do
   total <- db $ P.count @_ @_ @CommunityMember []
-  byStatus <- fmap Map.fromList $ for allVals $ \status -> do
+  byStatus <- Map.fromList <$> for allVals \status -> do
     count <- db $ P.count [CommunityMemberStatus P.==. status]
     pure (status, count)
-  byType <- fmap Map.fromList $ for allVals $ \ty -> do
+  byType <- Map.fromList <$> for allVals \ty -> do
     count <- db $ P.count [MemberNameNameType P.==. ty]
     pure (ty, count)
   pure $ Summary total byStatus byType
@@ -141,7 +150,7 @@ setCommunityMemberStatus nametype name status = do
   mmemid <- db $ P.getBy $ UniqueNameTypeName nametype name
   case mmemid of
     Nothing -> pure Nothing
-    Just (Entity _ (MemberName memid _ _ _))  -> do
+    Just (Entity _ (MemberName memid _ _ _)) -> do
       db $ P.update memid [CommunityMemberStatus P.=. status]
       pure $ Just memid
 
@@ -150,7 +159,7 @@ addMemberNameById :: P.Members '[Persistable, Req] r
 addMemberNameById memid nametype name = do
   mmem <- db $ P.get memid
   uuid <- case nametype of
-    MinecraftJavaName -> Just <$>  fetchUUIDByName name
+    MinecraftJavaName -> Just <$> fetchUUIDByName name
     _                 -> pure Nothing
   case mmem of
     Nothing -> pure Nothing
@@ -172,7 +181,7 @@ updateMemberName nametype name name' = do
 generateWhitelist :: P.Members '[Persistable, Req] r
   => P.Sem r ByteString
 generateWhitelist = do
-  mns <- db $ select $ do
+  mns <- db $ select do
     (cms :& mns) <-
       from $ table @CommunityMember
       `innerJoin` table @MemberName
@@ -195,11 +204,11 @@ registerPlayerCommands admin
   $ hide
   $ help (const "Query information about community members.")
   $ group "player"
-  $ do
+  do
     -- Manage Community Members
     void
       $ help (const "Create a blank player entry.")
-      $ command @'[NameType, Named "name" Text] "new" $ \ctx ty name -> do
+      $ command @'[NameType, Named "name" Text] "new" \ctx ty name -> do
       (_, memid) <- createCommunityMember ty name
       Just mem <- getCommunityMemberById memid
       invoke_ $ CreateMessage ctx $ def @CreateMessageOptions
@@ -208,7 +217,7 @@ registerPlayerCommands admin
 
     void
       $ help (const "Display all info for a player.")
-      $ command @'[Named "id" Int] "get" $ \ctx memid -> do
+      $ command @'[Named "id" Int] "get" \ctx memid -> do
       mmem <- getCommunityMemberById (int2memid memid)
       case mmem of
         Nothing  -> tellt_ ctx "Error: Could not find player with that id."
@@ -216,7 +225,7 @@ registerPlayerCommands admin
 
     void
       $ help (const "Remove a player by id.")
-      $ command @'[Named "id" Int] "remove" $ \ctx memid -> do
+      $ command @'[Named "id" Int] "remove" \ctx memid -> do
       res <- removeCommunityMember (int2memid memid)
       if res
         then tellt_ ctx "Success, player removed."
@@ -225,7 +234,7 @@ registerPlayerCommands admin
     -- Manage Member names
     void
       $ help (const "Add a player name given another name of that player. If that name does not exist, a new player will be created with both names.")
-      $ command @'[NameType, Named "name" Text, NameType, Named "name" Text] "linkname" $ \ctx ty name ty' name' -> do
+      $ command @'[NameType, Named "name" Text, NameType, Named "name" Text] "linkname" \ctx ty name ty' name' -> do
       mmemid <- linkMemberNames ty name ty' name'
       case mmemid of
         Nothing -> tellt_ ctx "Error: The given name and type already exist."
@@ -236,7 +245,7 @@ registerPlayerCommands admin
 
     void
       $ help (const "Add a player name by id.")
-      $ command @'[Named "id" Int, NameType, Named "name" Text] "addname" $ \ctx (int2memid -> memid) ty name -> do
+      $ command @'[Named "id" Int, NameType, Named "name" Text] "addname" \ctx (int2memid -> memid) ty name -> do
       mmemid <- addMemberNameById memid ty name
       case mmemid of
         Nothing -> tellt_ ctx "Error: Player not found."
@@ -247,7 +256,7 @@ registerPlayerCommands admin
 
     void
       $ help (const "Update a given name with another name.")
-      $ command @'[NameType, Named "name" Text, Named "name" Text] "updatename" $ \ctx ty name name' -> do
+      $ command @'[NameType, Named "name" Text, Named "name" Text] "updatename" \ctx ty name name' -> do
       mmemid <- updateMemberName ty name name'
       case mmemid of
         Nothing -> tellt_ ctx "Error: Name not found."
@@ -259,7 +268,7 @@ registerPlayerCommands admin
     -- Misc.
     void
       $ help (const "Search for a player by name.")
-      $ command @'[Maybe NameType, Named "name" Text] "search" $ \ctx mty name -> do
+      $ command @'[Maybe NameType, Named "name" Text] "search" \ctx mty name -> do
       case mty of
         Nothing -> do
           res <- searchCommunityMemberAllTypes name
@@ -273,7 +282,7 @@ registerPlayerCommands admin
             xs -> tell_ ctx $ ppMemberSearchResult xs
     void
       $ help (const "Remove a name entry for a player.")
-      $ command @'[NameType, Named "name" Text] "removename" $ \ctx nametype name -> do
+      $ command @'[NameType, Named "name" Text] "removename" \ctx nametype name -> do
       mmem <- removeCommunityMemberName nametype name
       case mmem of
         Nothing -> tellt_ ctx "Error: Could not find player with that name and type."
@@ -281,7 +290,7 @@ registerPlayerCommands admin
 
     void
       $ help (const "Get a summary of all players.")
-      $ command @'[] "summary" $ \ctx -> do
+      $ command @'[] "summary" \ctx -> do
       Summary{..} <- getCommunityMemberSummary
       tell_ @Embed ctx ( def
         & #title ?~ "Player Summary"
@@ -293,7 +302,7 @@ registerPlayerCommands admin
 
     void
       $ help (const "Set the status of a player.")
-      $ command @'[NameType, Named "name" Text, CommunityMemberStatus] "setstatus" $ \ctx nametype name status -> do
+      $ command @'[NameType, Named "name" Text, CommunityMemberStatus] "setstatus" \ctx nametype name status -> do
       mmemid <- setCommunityMemberStatus nametype name status
       case mmemid of
         Nothing -> tellt_ ctx "Error: Could not find player with that name and type."
@@ -306,7 +315,7 @@ registerPlayerCommands admin
 
     void
       $ help (const "Generate a whitelist.")
-      $ command @'[] "whitelist" $ \ctx -> do
+      $ command @'[] "whitelist" \ctx -> do
         wl <- generateWhitelist
         invoke_ $ CreateMessage ctx $ def
           & #attachments ?~ [CreateMessageAttachment "whitelist.json" (Just "Minecraft Whitelist file") wl]
@@ -370,7 +379,7 @@ ppMemberNamePair :: MemberName -> (T.Text, T.Text)
 ppMemberNamePair (MemberName _ ty name uuid) = (ppType ty, name')
   where
     name' = case ty of
-      MinecraftJavaName -> name <> " {" <> (getUUID $ fromJust uuid) <> "}"
+      MinecraftJavaName -> name <> " {" <> getUUID (fromJust uuid) <> "}"
       _                 -> name
 
 ppType :: NameType -> T.Text

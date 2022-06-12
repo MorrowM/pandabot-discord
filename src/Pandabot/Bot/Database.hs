@@ -5,12 +5,12 @@ module Pandabot.Bot.Database
   , runPersistWith
   ) where
 
-import           Conduit
-import           Control.Monad
-import           Control.Monad.Logger    (LoggingT, runStdoutLoggingT)
-import           Data.Text               (Text)
-import           Database.Persist.Sqlite
-import qualified Polysemy                as P
+import Conduit
+import Control.Monad
+import Control.Monad.Logger ( LoggingT, runStdoutLoggingT )
+import Data.Text ( Text )
+import Database.Persist.Sqlite
+import Polysemy qualified as P
 
 type DatabaseAction a = SqlPersistT (LoggingT (ResourceT IO)) a
 
@@ -25,7 +25,7 @@ db_ = void . db
 
 -- | A `polysemy` effect handler for `persistent` actions.
 runPersistWith :: P.Member (P.Embed IO) r => Text -> P.Sem (Persistable : r) a -> P.Sem r a
-runPersistWith conn = P.interpret $ \case
+runPersistWith conn = P.interpret \case
   Db action ->
     P.embed
     . runResourceT

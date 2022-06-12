@@ -3,47 +3,47 @@ module Pandabot
   , main
   ) where
 
-import           Calamity
-import           Calamity.Cache.InMemory
-import           Calamity.Commands                      hiding (path)
-import           Calamity.Commands.Context
-import           Calamity.Gateway
-import           Calamity.Metrics.Noop
-import           Calamity.Types.Model.Presence.Activity as Activity
-import           Control.Monad
-import qualified Data.Aeson                             as Aeson
-import           Data.Flags
-import           Data.List
-import qualified Data.Map                               as Map
-import qualified Data.Sequence                          as Seq
-import qualified Data.Yaml                              as Yaml
-import qualified Database.Persist.Sql                   as DB
-import qualified Df1
-import qualified Di
-import qualified Di.Core
-import qualified DiPolysemy                             as DiP
-import           Optics
-import           Options.Generic
-import qualified Polysemy                               as P
-import qualified Polysemy.AtomicState                   as P
-import qualified Polysemy.Reader                        as P
-import qualified Polysemy.Time                          as P
-import           System.Directory
-import           System.Exit
+import Calamity
+import Calamity.Cache.InMemory
+import Calamity.Commands hiding ( path )
+import Calamity.Commands.Context
+import Calamity.Gateway
+import Calamity.Metrics.Noop
+import Calamity.Types.Model.Presence.Activity as Activity
+import Control.Monad
+import Data.Aeson qualified as Aeson
+import Data.Flags
+import Data.List
+import Data.Map qualified as Map
+import Data.Sequence qualified as Seq
+import Data.Yaml qualified as Yaml
+import Database.Persist.Sql qualified as DB
+import Df1 qualified
+import Di qualified
+import Di.Core qualified
+import DiPolysemy qualified as DiP
+import Optics
+import Options.Generic
+import Polysemy qualified as P
+import Polysemy.AtomicState qualified as P
+import Polysemy.Reader qualified as P
+import Polysemy.Time qualified as P
+import System.Directory
+import System.Exit
 
-import           Pandabot.Bot.Commands
-import           Pandabot.Bot.Config
-import           Pandabot.Bot.Database
-import           Pandabot.Bot.Handlers
-import           Pandabot.Bot.Schema
-import           Pandabot.Bot.Util
-import           Pandabot.Modtools
-import           Pandabot.PlayerDB.Whitelist
-import           Pandabot.Points
+import Pandabot.Bot.Commands
+import Pandabot.Bot.Config
+import Pandabot.Bot.Database
+import Pandabot.Bot.Handlers
+import Pandabot.Bot.Schema
+import Pandabot.Bot.Util
+import Pandabot.Modtools
+import Pandabot.PlayerDB.Whitelist
+import Pandabot.Points
 
 -- | Run the bot with a given configuration.
 runBotWith :: Config -> IO ()
-runBotWith cfg = Di.new $ \di ->
+runBotWith cfg = Di.new \di ->
   void
   . P.runFinal
   . P.embedToFinal @IO
@@ -63,7 +63,8 @@ runBotWith cfg = Di.new $ \di ->
     (BotToken (cfg ^. #botToken))
     (defaultIntents .+. intentGuildMembers .+. intentGuildPresences)
     (Just (StatusUpdateData Nothing [botActivity] Online False))
-  . handleFailByLogging $ do
+  . handleFailByLogging
+  $ do
     db $ DB.runMigration migrateAll
     registerBotCommands
     registerEventHandlers
@@ -92,7 +93,7 @@ main = do
       if b then x else y
 
 _filterShard :: Di.Core.Di level Di.Path msg -> Di.Core.Di level Di.Path msg
-_filterShard = Di.Core.filter $ \_ path _ ->
+_filterShard = Di.Core.filter \_ path _ ->
   path /= shardPath
   where
     shardPath = Seq.fromList [Df1.Push "calamity", Df1.Push "calamity-shard", Df1.Attr "shard-id" "0"]

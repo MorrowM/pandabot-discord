@@ -11,38 +11,38 @@ module Pandabot.Points
   , registerPointRevokeHandler
   ) where
 
-import           Calamity
-import           Data.Map                  (Map)
-import           Database.Persist          as DB
-import           GHC.Generics              (Generic)
-import qualified Polysemy                  as P
+import Calamity
+import Data.Map ( Map )
+import Database.Persist as DB
+import GHC.Generics ( Generic )
+import Polysemy qualified as P
 
-import           Calamity.Commands
-import           Calamity.Commands.Context (FullContext)
-import           Control.Arrow             ((&&&))
-import           Control.Monad
-import           Data.Default
-import           Data.Flags
-import           Data.List
-import qualified Data.Map                  as Map
-import           Data.Maybe
-import           Data.Ord
-import           Data.Text                 (Text)
-import qualified Data.Text                 as T
-import           Data.Traversable
-import qualified Data.Vector.Unboxing      as VU
-import           Optics
-import qualified Polysemy.AtomicState      as P
-import qualified Polysemy.Fail             as P
-import qualified Polysemy.NonDet           as P
-import qualified Polysemy.Reader           as P
-import qualified Polysemy.Time             as P
-import           TextShow
+import Calamity.Commands
+import Calamity.Commands.Context ( FullContext )
+import Control.Arrow ( (&&&) )
+import Control.Monad
+import Data.Default
+import Data.Flags
+import Data.List
+import Data.Map qualified as Map
+import Data.Maybe
+import Data.Ord
+import Data.Text ( Text )
+import Data.Text qualified as T
+import Data.Traversable
+import Data.Vector.Unboxing qualified as VU
+import Optics
+import Polysemy.AtomicState qualified as P
+import Polysemy.Fail qualified as P
+import Polysemy.NonDet qualified as P
+import Polysemy.Reader qualified as P
+import Polysemy.Time qualified as P
+import TextShow
 
-import           Pandabot.Bot.Config
-import           Pandabot.Bot.Database
-import           Pandabot.Bot.Schema
-import           Pandabot.Bot.Util
+import Pandabot.Bot.Config
+import Pandabot.Bot.Database
+import Pandabot.Bot.Schema
+import Pandabot.Bot.Util
 
 -- | A record of which replies have been made for which message,
 -- in order to be able to delete them when necessary.
@@ -75,7 +75,7 @@ registerAwardCommand admin = void
     $ requires [admin]
     $ help (const "Award bamboo shoots to pandas.")
     $ hide
-    $ command @'[Member, Named "shoots" (Maybe Int), KleenePlusConcat Text] "award" $ \ctx mem mamnt reason -> do
+    $ command @'[Member, Named "shoots" (Maybe Int), KleenePlusConcat Text] "award" \ctx mem mamnt reason -> do
     Just guild <- pure $ ctx ^. #guild
     time <- P.now
     let amnt = fromMaybe 1 mamnt
@@ -111,8 +111,7 @@ registerLeaderboardCommand ::
   ) => P.Sem (DSLState FullContext r) ()
 registerLeaderboardCommand = void
     $ help (const "Shows the top bamboo shoot pandas.")
-    $ commandA @'[] "leaderboard" ["lb"]
-    $ \ctx -> do
+    $ commandA @'[] "leaderboard" ["lb"] \ctx -> do
     Just gld <- pure (ctx ^. #guild)
     messagePointsRaw <- db $ selectList [MessagePointGuild ==. getID gld] [Asc MessagePointAssignedTo]
     freePointsRaw <- db $ selectList [FreePointGuild ==. getID gld] [Asc FreePointAssignedTo]
@@ -187,7 +186,7 @@ registerPointGiveHandler ::
     , P.Reader Config
     ] r
   ) => P.Sem r ()
-registerPointGiveHandler = void $ P.runNonDetMaybe $ react @'MessageReactionAddEvt $ \(msg, usr, _chan, rct) -> do
+registerPointGiveHandler = void $ P.runNonDetMaybe $ react @'MessageReactionAddEvt \(msg, usr, _chan, rct) -> do
   npEmoji <- P.asks @Config $ view #pointAssignEmoji
   guard $ npEmoji == rct
   notifGangRole <- P.asks @Config $ view #notifGangRole
@@ -206,9 +205,9 @@ registerPointRevokeHandler ::
     , P.Reader Config
     ] r
   ) => P.Sem r ()
-registerPointRevokeHandler = void $ react @'MessageReactionRemoveEvt $ \(msg, usr, _chan, rct) -> do
+registerPointRevokeHandler = void $ react @'MessageReactionRemoveEvt \(msg, usr, _chan, rct) -> do
   pointEmoji <- P.asks @Config $ view #pointAssignEmoji
-  when (pointEmoji == rct) $ do
+  when (pointEmoji == rct) do
     db_ $ deleteWhere
       [ MessagePointMessage ==. (msg ^. #id)
       , MessagePointAssignedBy ==. (usr ^. #id)

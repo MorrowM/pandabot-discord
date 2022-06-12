@@ -2,17 +2,18 @@ module Pandabot.PandaRole
   ( registerPandaRoleGiveHandler
   ) where
 
-import           Calamity
-import           Control.Monad
-import           Optics
-import qualified Polysemy             as P
-import qualified Polysemy.AtomicState as P
-import qualified Polysemy.Fail        as P
-import qualified Polysemy.Reader      as P
+import Calamity
+import Control.Monad
+import Optics
+import Polysemy qualified as P
+import Polysemy.AtomicState qualified as P
+import Polysemy.Fail qualified as P
+import Polysemy.Reader qualified as P
+import TextShow
 
-import           Pandabot.Bot.Config
-import           Pandabot.Bot.Util
-import           Pandabot.Modtools
+import Pandabot.Bot.Config
+import Pandabot.Bot.Util
+import Pandabot.Modtools
 
 registerPandaRoleGiveHandler ::
   ( BotC r
@@ -22,13 +23,9 @@ registerPandaRoleGiveHandler ::
     , P.Reader Config
     ] r
   ) => P.Sem r ()
-registerPandaRoleGiveHandler = void $ react @'GuildMemberAddEvt $ \mem -> do
-    -- TODO Fix this as well when the guild ID bug is fixed. See the TODO lower down.
-    info $ "User " <> (mem ^. #username) <> " joined guild " -- <> (mem ^. #guildID % to showt)
+registerPandaRoleGiveHandler = void $ react @'GuildMemberAddEvt \(guild, mem) -> do
+    info $ "User " <> (mem ^. #username) <> " joined guild " <> showt (getID @Guild guild)
     ldState <- P.atomicGet @LockdownState
-    when (ldState == Unlocked) $ do
+    when (ldState == Unlocked) do
       wrole <- P.asks @Config $ view #welcomeRole
-      void . invoke $ AddGuildMemberRole (Snowflake @Guild 753002885633146932) mem wrole
-      -- TODO The guild ID is hardcoded because of a bug in calamity.
-      --      The GuildMemberAddEvt event does not include the guild ID in its
-      --      payload even though the changelog says it should.
+      void . invoke $ AddGuildMemberRole guild mem wrole

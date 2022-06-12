@@ -11,14 +11,15 @@ module Pandabot.Bot.Util
   , tell_
   ) where
 
-import           Calamity
-import           Control.Monad
-import           Data.Text        (Text)
-import           Data.Text.Optics
-import qualified DiPolysemy       as DiP
-import           Optics
-import qualified Polysemy         as P
-import qualified Polysemy.Fail    as P
+import Calamity
+import Control.Monad
+import Data.Foldable
+import Data.Text ( Text )
+import Data.Text.Optics
+import DiPolysemy qualified as DiP
+import Optics
+import Polysemy qualified as P
+import Polysemy.Fail qualified as P
 
 -- | Handle the `Fail` effect by logging it.
 handleFailByLogging :: BotC r => P.Sem (P.Fail : r) a -> P.Sem r ()
@@ -35,15 +36,14 @@ debug = DiP.info
 
 -- | `tell` a `Text`.
 tellt :: (BotC r, Tellable t) => t -> Text -> P.Sem r (Either RestError Message)
-tellt = tell @Text
+tellt = tell
 
 -- | `tell` a `Text`, discarding the result.
 tellt_ :: (BotC r, Tellable t) => t -> Text -> P.Sem r ()
-tellt_ = void .: tell @Text
+tellt_ = void .: tell
 
 whenJust :: Applicative f => Maybe a -> (a -> f ()) -> f ()
-whenJust = flip $ maybe (pure ())
-
+whenJust = for_
 
 invoke_ :: _ => a -> P.Sem r ()
 invoke_ = void . invoke
@@ -55,4 +55,4 @@ allVals :: (Enum a, Bounded a) => [a]
 allVals = [minBound..maxBound]
 
 tell_ :: forall msg r t. (BotC r, ToMessage msg, Tellable t) => t -> msg -> P.Sem r ()
-tell_ c msg = void $ tell c msg
+tell_ = void .: tell

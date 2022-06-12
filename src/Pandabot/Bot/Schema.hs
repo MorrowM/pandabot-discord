@@ -15,24 +15,24 @@
 {-# LANGUAGE UndecidableInstances       #-}
 module Pandabot.Bot.Schema where
 
-import           Pandabot.Bot.Orphans           ()
+import Pandabot.Bot.Orphans ()
 
-import           Calamity hiding (Button)
-import           Calamity.Commands
-import           CalamityCommands.ParameterInfo
-import           Control.Applicative
-import           Data.Aeson
-import           Data.Maybe
-import           Data.Text                      (Text)
-import qualified Data.Text                      as S
-import           Data.Time
-import           Database.Persist
-import           Database.Persist.Sql
-import           Database.Persist.TH
-import           GHC.Generics                   (Generic)
-import           Text.Megaparsec.Char
-import           TextShow
-import           TextShow.Generic
+import Calamity hiding ( Button )
+import Calamity.Commands
+import CalamityCommands.ParameterInfo
+import Control.Applicative
+import Data.Aeson
+import Data.Maybe
+import Data.Text ( Text )
+import Data.Text qualified as S
+import Data.Time
+import Database.Persist
+import Database.Persist.Sql
+import Database.Persist.TH
+import GHC.Generics ( Generic )
+import Text.Megaparsec.Char
+import TextShow
+import TextShow.Generic
 
 newtype PersistFieldEnum a = PersistFieldEnum a
   deriving newtype (Eq, Ord, Bounded, Enum)

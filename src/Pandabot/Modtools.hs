@@ -5,16 +5,16 @@ module Pandabot.Modtools
   , toggleLockdownPure
   ) where
 
-import           Calamity
-import           Calamity.Commands
-import           Calamity.Commands.Context      ( FullContext )
-import           Control.Monad
-import           Data.Text                      ( Text )
-import           GHC.Generics
-import qualified Polysemy                      as P
-import qualified Polysemy.AtomicState          as P
-import           TextShow
-import           TextShow.Generic
+import Calamity
+import Calamity.Commands
+import Calamity.Commands.Context ( FullContext )
+import Control.Monad
+import Data.Text ( Text )
+import GHC.Generics
+import Polysemy qualified as P
+import Polysemy.AtomicState qualified as P
+import TextShow
+import TextShow.Generic
 
 data LockdownState = Locked | Unlocked
   deriving stock (Show, Eq, Enum, Bounded, Ord, Generic)
@@ -30,8 +30,7 @@ registerLockdownCommand admin =
     $ help @FullContext
         (const "Temporarily disables members from getting the @Pandas role.")
     $ hide
-    $ command @'[] "lockdown"
-    $ \ctx -> do
+    $ command @'[] "lockdown" \ctx -> do
         ldState <- toggleLockdown
         void $ reply @Text ctx $ "Lockdown state: " <> showt ldState
 

@@ -3,11 +3,11 @@ module Pandabot.Bot.Config
   , CLIOptions (..)
   ) where
 
-import           Calamity
-import           Data.Aeson
-import           GHC.Generics
-import           Optics
-import           Options.Generic
+import Calamity
+import Data.Aeson
+import GHC.Generics
+import Optics
+import Options.Generic
 
 -- | CLI options
 newtype CLIOptions w = Options

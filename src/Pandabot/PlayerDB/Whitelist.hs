@@ -1,19 +1,19 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Pandabot.PlayerDB.Whitelist where
 
-import           Pandabot.Bot.Schema
+import Pandabot.Bot.Schema
 
-import           Data.Aeson
-import           Data.Aeson.Optics
-import           Data.Proxy
-import           Data.Text               (Text)
-import           Data.Traversable
-import           GHC.Generics            (Generic)
-import           Network.HTTP.Req        hiding (Req, req)
-import qualified Network.HTTP.Req        as R (req)
-import           Optics
-import           Optics.Operators.Unsafe ((^?!))
-import qualified Polysemy                as P
+import Data.Aeson
+import Data.Aeson.Optics
+import Data.Proxy
+import Data.Text ( Text )
+import Data.Traversable
+import GHC.Generics ( Generic )
+import Network.HTTP.Req hiding ( Req, req )
+import Network.HTTP.Req qualified as R ( req )
+import Optics
+import Optics.Operators.Unsafe ( (^?!) )
+import Polysemy qualified as P
 
 data Req m a where
   Req ::
@@ -56,11 +56,13 @@ newtype NameHistory = NameHistory [NameHistoryEntry]
 
 fetchEntryByName :: P.Member Req r => Text -> P.Sem r Value
 fetchEntryByName nm =
-  responseBody <$> req GET (https "api.mojang.com" /: "users" /: "profiles" /: "minecraft" /: nm) NoReqBody jsonResponse mempty
+  responseBody <$> req GET (https "api.mojang.com" /: "users" /: "profiles" /: "minecraft" /: nm)
+                       NoReqBody jsonResponse mempty
 
 fetchNameHistoryByUUID :: P.Member Req r => UUID -> P.Sem r NameHistory
 fetchNameHistoryByUUID nm =
-  responseBody <$> req GET (https "api.mojang.com" /: "user" /: "profiles" /: getUUID nm /: "names") NoReqBody jsonResponse mempty
+  responseBody <$> req GET (https "api.mojang.com" /: "user" /: "profiles" /: getUUID nm /: "names")
+                       NoReqBody jsonResponse mempty
 
 fetchUUIDByName :: P.Member Req r => Text -> P.Sem r UUID
 fetchUUIDByName name =  do
@@ -74,6 +76,6 @@ fetchCurrentNameByUUID u = do
 
 fetchWhitelist :: P.Member Req r => [UUID] -> P.Sem r Whitelist
 fetchWhitelist uuids = Whitelist <$> do
-  for uuids $ \u -> do
+  for uuids \u -> do
     nm <- fetchCurrentNameByUUID u
     pure $ WhitelistEntry u nm
