@@ -31,6 +31,7 @@ library
     Pandabot.Help
     Pandabot.Modtools
     Pandabot.PandaRole
+    Pandabot.PinTool
     Pandabot.PlayerDB
     Pandabot.PlayerDB.Whitelist
     Pandabot.Points
