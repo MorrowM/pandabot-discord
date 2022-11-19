@@ -23,7 +23,7 @@ registerPinToolHandler ::
   ) =>
   P.Sem r ()
 registerPinToolHandler = void $
-  react @ 'MessageReactionAddEvt $ \(msg, user, chan, rawEmoji) -> void $
+  react @'MessageReactionAddEvt $ \(msg, user, chan, rawEmoji) -> void $
     P.runNonDetMaybe $ do
       GuildChannel' gc <- pure chan
       Right mem <- invoke $ GetGuildMember gc user
