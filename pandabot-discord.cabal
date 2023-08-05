@@ -75,9 +75,9 @@ library
     , aeson
     , aeson-optics
     , aeson-pretty
-    , base                  >=4.7 && <5
+    , base                  >=4.7   && <5
     , bytestring
-    , calamity              ^>=0.7
+    , calamity              ^>=0.10
     , calamity-commands     ^>=0.4
     , conduit
     , containers
@@ -89,6 +89,7 @@ library
     , di-polysemy
     , directory
     , esqueleto
+    , http-client
     , megaparsec
     , monad-logger
     , optics
@@ -98,7 +99,7 @@ library
     , polysemy
     , polysemy-plugin
     , polysemy-time
-    , PyF < 0.11
+    , PyF                   <0.11
     , req
     , text
     , text-show

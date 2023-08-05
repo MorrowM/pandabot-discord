@@ -31,6 +31,7 @@ import           Database.Esqueleto.Experimental (BackendKey (unSqlBackendKey),
 import qualified Database.Esqueleto.Experimental as E
 import qualified Database.Persist                as P
 import           GHC.Generics                    (Generic)
+import           Network.HTTP.Client             (RequestBody(..))
 import           Optics
 import           Pandabot.PlayerDB.Whitelist
 import qualified Polysemy                        as P
@@ -309,7 +310,7 @@ registerPlayerCommands admin
       $ command @'[] "whitelist" $ \ctx -> do
         wl <- generateWhitelist
         invoke_ $ CreateMessage ctx $ def
-          & #attachments ?~ [CreateMessageAttachment "whitelist.json" (Just "Minecraft Whitelist file") wl]
+          & #attachments ?~ [CreateMessageAttachment "whitelist.json" (Just "Minecraft Whitelist file") (RequestBodyLBS wl)]
 
 ppMemberGetResult :: Entity CommunityMember -> [MemberName] -> Embed
 ppMemberGetResult (Entity memid (CommunityMember status createdAt)) ty = def
@@ -370,7 +371,7 @@ ppMemberNamePair :: MemberName -> (T.Text, T.Text)
 ppMemberNamePair (MemberName _ ty name uuid) = (ppType ty, name')
   where
     name' = case ty of
-      MinecraftJavaName -> name <> " {" <> (getUUID $ fromJust uuid) <> "}"
+      MinecraftJavaName -> name <> " {" <> getUUID (fromJust uuid) <> "}"
       _                 -> name
 
 ppType :: NameType -> T.Text
